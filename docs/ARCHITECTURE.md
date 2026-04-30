@@ -64,7 +64,6 @@ ista-khemisset-platform/
 │   ├── public/
 │   ├── jsconfig.json
 │   └── tailwind.config.js
-├── docker-compose.yml          # mysql + phpmyadmin (dev)
 ├── .github/workflows/ci.yml
 └── README.md
 ```
@@ -633,8 +632,9 @@ Bouton **Nouvelle offre** → formulaire dans page ou modal.
 
 ## 10. Environnement & déploiement
 
-### Dev local (docker-compose)
-- Service `db` (MySQL 8) + `pma` (phpMyAdmin).
+### Dev local (XAMPP)
+- Installer XAMPP et démarrer MySQL.
+- Créer une base de données `tremplin` via phpMyAdmin.
 - Backend lancé avec `php artisan serve` (port 8000).
 - Frontend lancé avec `npm run dev` (Vite, port 5173) — proxy `/api` → `http://localhost:8000`.
 
@@ -643,10 +643,10 @@ Bouton **Nouvelle offre** → formulaire dans page ou modal.
 APP_NAME="Tremplin"
 APP_URL=http://localhost:8000
 DB_CONNECTION=mysql
-DB_HOST=mysql
+DB_HOST=127.0.0.1
 DB_DATABASE=tremplin
-DB_USERNAME=tremplin
-DB_PASSWORD=secret
+DB_USERNAME=root
+DB_PASSWORD=
 QUEUE_CONNECTION=database
 FILESYSTEM_DISK=local
 SANCTUM_STATEFUL_DOMAINS=localhost:5173
@@ -671,7 +671,7 @@ VITE_API_URL=http://localhost:8000/api
 | Phase | Livrable                                                                 |
 |-------|--------------------------------------------------------------------------|
 | **0** | Validation de ce document                                                |
-| **1** | Scaffold monorepo + CI + docker-compose + auth (register/login) + rôles |
+| **1** | Scaffold monorepo + CI + XAMPP setup + auth (register/login) + rôles |
 | **2** | Espace stagiaire : profil, suivi d'emploi, CV builder                  |
 | **3** | CV builder (form + aperçu live + impression navigateur)                 |
 | **4** | Espace public offres + candidature + règles de gating                   |

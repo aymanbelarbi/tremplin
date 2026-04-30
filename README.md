@@ -19,10 +19,9 @@
 4. [Project Setup](#project-setup)
 5. [Running the Application](#running-the-application)
 6. [Demo Accounts](#demo-accounts)
-7. [Docker Services](#docker-services)
-8. [Testing](#testing)
-9. [Useful Commands](#useful-commands)
-10. [Troubleshooting](#troubleshooting)
+7. [Testing](#testing)
+8. [Useful Commands](#useful-commands)
+9. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -30,7 +29,7 @@
 
 - **Frontend**: React 18 (JavaScript / JSX) + Vite + Tailwind CSS
 - **Backend**: Laravel 11 + PHP 8.3 + Sanctum (Token-based auth)
-- **Database**: MySQL 8 (Docker for dev, dedicated server for prod)
+- **Database**: MySQL 8 (XAMPP for dev, dedicated server for prod)
 - **Employment Tracking**: Each trainee indicates if they are employed or looking for a job
 - **CV**: Real-time PDF generation (`jsPDF` + `html2canvas`)
 - **Mail**: Configurable SMTP (default to log in dev)
@@ -42,8 +41,6 @@ tremplin/
 ├── backend/                   # Laravel 11 API
 ├── frontend/                  # React 18 SPA (JS/JSX) + Vite + Tailwind
 ├── docs/                      # Documentation
-├── docker-compose.yml         # MySQL + phpMyAdmin (dev)
-├── .github/workflows/ci.yml   # CI: backend tests + frontend lint/build
 └── README.md
 ```
 
@@ -51,7 +48,7 @@ tremplin/
 
 ## Prerequisites Installation
 
-You need **4 tools**: **PHP 8.3+**, **Node 20+**, **Composer 2**, and **Docker** (for local MySQL). Choose your platform below.
+You need **3 tools**: **PHP 8.3+**, **Node 20+**, **Composer 2**, and **XAMPP** (for local MySQL). Choose your platform below.
 
 ### Windows
 
@@ -62,13 +59,13 @@ You need **4 tools**: **PHP 8.3+**, **Node 20+**, **Composer 2**, and **Docker**
 2. **Composer**: Download the installer [getcomposer.org/Composer-Setup.exe](https://getcomposer.org/Composer-Setup.exe) and run it.
 3. **Node 20+**: Download the LTS installer from [nodejs.org](https://nodejs.org/) → "LTS".
 4. **Git**: [git-scm.com/download/win](https://git-scm.com/download/win).
-5. **Docker Desktop**: [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop/) (requires WSL2 on Windows 10/11).
+5. **XAMPP**: Download from [apachefriends.org](https://www.apachefriends.org/) and install (includes MySQL).
 
 **Option B — Chocolatey (Faster if you are familiar)**
 
 ```powershell
 # In PowerShell as Administrator
-choco install php composer nodejs-lts git docker-desktop -y
+choco install php composer nodejs-lts git -y
 ```
 
 **Verification:**
@@ -86,8 +83,9 @@ git --version
 ```bash
 brew install php@8.3 composer node git
 brew link --force --overwrite php@8.3
-brew install --cask docker     # Docker Desktop
 ```
+
+**For MySQL, install XAMPP from [apachefriends.org](https://www.apachefriends.org/).**
 
 **Verification:**
 ```bash
@@ -114,9 +112,7 @@ sudo mv composer.phar /usr/local/bin/composer
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt install -y nodejs
 
-# Docker + Docker Compose
-curl -fsSL https://get.docker.com | sudo sh
-sudo usermod -aG docker $USER  # restart session to use docker without sudo
+# For MySQL, install XAMPP from [apachefriends.org](https://www.apachefriends.org/).
 ```
 
 **Verification:**
@@ -150,16 +146,10 @@ composer install
 - **Windows (PowerShell):** `Copy-Item .env.example .env`
 - **Windows (CMD):** `copy .env.example .env`
 
-**Start MySQL via Docker** (from the repo root, in another terminal):
+**Start MySQL via XAMPP:**
 
-```bash
-docker compose up -d mysql
-```
-
-MySQL runs on `localhost:3306` with:
-- DB: `tremplin`
-- User: `tremplin`
-- Password: `secret`
+- Open XAMPP Control Panel and start MySQL.
+- Open phpMyAdmin (usually http://localhost/phpmyadmin) and create a database named `tremplin`.
 
 These values are already in `.env.example` — no changes needed.
 
@@ -219,23 +209,6 @@ You can also create a new trainee account via public registration at `/inscripti
 
 ---
 
-## Docker Services
-
-The `docker-compose.yml` provides MySQL + phpMyAdmin:
-
-```bash
-docker compose up -d           # start everything
-docker compose up -d db          # just MySQL (sufficient to run the app)
-docker compose down            # stop everything
-docker compose down -v         # stop + remove volumes (reset DB)
-```
-
-Available services:
-- **MySQL**: `localhost:3306` (user=`tremplin`, pwd=`secret`, db=`tremplin`)
-- **phpMyAdmin**: http://localhost:8080 (root/root)
-
----
-
 ## Testing
 
 ```bash
@@ -279,8 +252,8 @@ npm run lint     # ESLint
 | Problem | Solution |
 |---|---|
 | `php: command not found` | PHP is not in your `PATH`. Check installation, restart your terminal. |
-| `SQLSTATE[HY000] [2002]` on startup | MySQL is unreachable. Check if Docker is up: `docker compose ps`. If empty: `docker compose up -d db`. |
-| `SQLSTATE[HY000] [1045] Access denied` | Wrong password. Check if `.env` contains `DB_USERNAME=tremplin` and `DB_PASSWORD=secret` (or reset volume: `docker compose down -v && docker compose up -d db`). |
+| `SQLSTATE[HY000] [2002]` on startup | MySQL is unreachable. Check if XAMPP MySQL is running in the XAMPP Control Panel. |
+| `SQLSTATE[HY000] [1045] Access denied` | Wrong credentials. Check if `.env` contains `DB_USERNAME=root` and `DB_PASSWORD=` (empty). Ensure the database `tremplin` exists in XAMPP phpMyAdmin. |
 | `Port 8000 already in use` | Another backend is running. Change port: `php artisan serve --port=8001`. |
 | `Port 5173 already in use` | Vite automatically takes the next one (5174, 5175...). Check console. |
 | Symfony Process error (Windows) | Open PowerShell as Administrator or add antivirus exception. |
