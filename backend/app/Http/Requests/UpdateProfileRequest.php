@@ -1,0 +1,37 @@
+<?php
+
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class UpdateProfileRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return $this->user()?->isStagiaire() ?? false;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'first_name' => ['sometimes', 'string', 'max:100'],
+            'last_name' => ['sometimes', 'string', 'max:100'],
+            'phone' => ['sometimes', 'nullable', 'string', 'max:20'],
+            'employment_status' => ['sometimes', 'in:looking,employed'],
+            'job_title' => ['sometimes', 'nullable', 'string', 'max:150'],
+            'job_company' => ['sometimes', 'nullable', 'string', 'max:150'],
+            'job_city' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'job_start_date' => ['sometimes', 'nullable', 'date', 'before_or_equal:today'],
+            'birth_date' => ['sometimes', 'nullable', 'date', 'before:today'],
+            'city' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'address' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'filiere' => ['sometimes', 'nullable', 'string', 'max:120'],
+            'promotion' => ['sometimes', 'nullable', 'integer', 'digits:4', 'min:2000'],
+            'bio' => ['sometimes', 'nullable', 'string', 'max:2000'],
+
+            'links' => ['sometimes', 'nullable', 'array'],
+            'links.*.label' => ['sometimes', 'string', 'max:50'],
+            'links.*.url' => ['sometimes', 'string', 'max:255', 'url'],
+        ];
+    }
+}
