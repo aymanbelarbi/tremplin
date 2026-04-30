@@ -19,7 +19,7 @@ import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
-import { getMyCv, updateMyCv } from '@/api/cv'
+import { getMyCv, updateMyCv, uploadCvPdf } from '@/api/cv'
 import { getMyProfile } from '@/api/profile'
 import SectionHeader from '@/components/ui/SectionHeader'
 import GroupedSelect from '@/components/ui/GroupedSelect'
@@ -34,6 +34,7 @@ const EMPTY_CV = {
   languages: [],
   certifications: [],
   links: [],
+  theme: 'modern',
 }
 
 // Convert any date format (ISO timestamp, full date, etc.) to yyyy-MM for month inputs
@@ -49,7 +50,7 @@ function toMonth(v) {
   return `${y}-${m}`
 }
 
-function toUi({ cvData, profileData }) {
+export function toUi({ cvData, profileData }) {
   const u = profileData?.user || {}
   const p = profileData?.profile || {}
   const rawTitle = cvData?.title || ''
@@ -105,6 +106,7 @@ function toUi({ cvData, profileData }) {
 
   return {
     title: cvData?.title || 'Mon CV',
+    theme: cvData?.theme || 'modern',
     photoUrl: p.photo_path || null,
     profile: {
       first_name: u.first_name || '',
@@ -155,6 +157,7 @@ function toApi(cv) {
   return {
     title: cv.profile.headline || null,
     summary: cv.profile.summary || null,
+    theme: cv.theme || 'modern',
     first_name: cv.profile.first_name || null,
     last_name: cv.profile.last_name || null,
     address: cv.profile.address || null,
@@ -252,9 +255,38 @@ export default function CvBuilderPage() {
   const isDirty = lastSavedCv && JSON.stringify(cv) !== JSON.stringify(lastSavedCv)
 
   const mutation = useMutation({
-    mutationFn: updateMyCv,
+    mutationFn: async (apiData) => {
+      await updateMyCv(apiData)
+      
+      const el = cvRef.current
+      if (el && hasPhoto) {
+        const canvas = await html2canvas(el, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+          logging: false,
+        })
+        const imgData = canvas.toDataURL('image/jpeg', 0.9)
+        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+        const pageW = 210
+        const pageH = 297
+        const imgW = canvas.width
+        const imgH = canvas.height
+        const ratio = Math.min(pageW / imgW, pageH / imgH)
+        const w = imgW * ratio
+        const h = imgH * ratio
+        const x = (pageW - w) / 2
+        const y = (pageH - h) / 2
+        pdf.addImage(imgData, 'JPEG', x, y, w, h, undefined, 'FAST')
+        
+        const blob = new Blob([pdf.output('arraybuffer')], { type: 'application/pdf' })
+        const formData = new FormData()
+        formData.append('pdf', blob, 'cv.pdf')
+        await uploadCvPdf(formData)
+      }
+    },
     onSuccess: () => {
-      toast.success('CV enregistré.')
+      toast.success('CV et PDF enregistrés avec succès.')
       setLastSavedCv(cv)
       queryClient.invalidateQueries({ queryKey: ['me', 'cv'] })
       queryClient.invalidateQueries({ queryKey: ['me', 'profile'] })
@@ -291,12 +323,12 @@ export default function CvBuilderPage() {
     setPdfLoading(true)
     try {
       const canvas = await html2canvas(el, {
-        scale: 3,
+        scale: 2,
         useCORS: true,
         backgroundColor: '#ffffff',
         logging: false,
       })
-      const imgData = canvas.toDataURL('image/png')
+      const imgData = canvas.toDataURL('image/jpeg', 0.9)
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
       const pageW = 210
       const pageH = 297
@@ -307,7 +339,7 @@ export default function CvBuilderPage() {
       const h = imgH * ratio
       const x = (pageW - w) / 2
       const y = (pageH - h) / 2
-      pdf.addImage(imgData, 'PNG', x, y, w, h)
+      pdf.addImage(imgData, 'JPEG', x, y, w, h, undefined, 'FAST')
       const fullName = [cv.profile.first_name, cv.profile.last_name].filter(Boolean).join('_') || 'cv'
       pdf.save(`CV_${fullName}.pdf`)
       toast.success('PDF téléchargé !')
@@ -356,6 +388,7 @@ export default function CvBuilderPage() {
             { id: 'certifications', label: 'Certifications' },
             { id: 'languages', label: 'Langues' },
             { id: 'loisirs', label: 'Loisirs' },
+            { id: 'design', label: 'Design' },
           ].map((t) => (
             <button
               key={t.id}
@@ -374,6 +407,33 @@ export default function CvBuilderPage() {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <div className="space-y-4">
+
+          {section === 'design' && (
+            <EditorCard title="Thème du CV">
+              <div className="grid grid-cols-2 gap-4">
+                {[
+                  { id: 'modern', label: 'Moderne', desc: 'Design épuré avec barre latérale.' },
+                  { id: 'classic', label: 'Classique', desc: 'Mise en page traditionnelle centrée.' },
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setCv({ ...cv, theme: t.id })}
+                    className={`flex flex-col gap-2 rounded-2xl border-2 p-4 text-left transition-all ${
+                      cv.theme === t.id
+                        ? 'border-brand-500 bg-brand-50'
+                        : 'border-ink/5 bg-paper-tint hover:border-ink/10'
+                    }`}
+                  >
+                    <span className={`text-sm font-bold ${cv.theme === t.id ? 'text-brand-700' : 'text-ink'}`}>
+                      {t.label}
+                    </span>
+                    <span className="text-[11px] leading-relaxed text-ink-muted">{t.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </EditorCard>
+          )}
 
           {section === 'profile' && (
             <EditorCard title="Informations personnelles">
@@ -865,12 +925,114 @@ function getAge(birthDate) {
   return age >= 0 ? age : null
 }
 
-const CvPreview = forwardRef(function CvPreview({ cv }, ref) {
+export const CvPreview = forwardRef(function CvPreview({ cv }, ref) {
   const experiences = cv.experiences || []
   const loisirs = (cv.links || []).filter((l) => l.label || l.url)
   const fullName = [cv.profile.first_name, cv.profile.last_name].filter(Boolean).join(' ').trim()
   const age = getAge(cv.profile.birth_date)
+  const theme = cv.theme || 'modern'
 
+  if (theme === 'classic') {
+    return (
+      <div className="lg:sticky lg:top-24 lg:self-start">
+        <div ref={ref} className="card-raised aspect-[1/1.414] overflow-hidden bg-white p-10 text-slate-800 shadow-xl">
+          <div className="flex flex-col h-full">
+            <header className="border-b-2 border-slate-900 pb-6 text-center">
+              <h3 className="font-serif text-3xl font-bold tracking-tight text-slate-900 uppercase">{fullName}</h3>
+              <p className="mt-2 text-sm font-medium tracking-widest text-slate-600 uppercase">{cv.profile.headline || '...'}</p>
+              
+              <div className="mt-4 flex flex-wrap justify-center gap-x-6 gap-y-1 text-[10px] font-medium text-slate-500">
+                {cv.profile.phone && <span className="flex items-center gap-1.5"><Phone className="h-3 w-3" /> {cv.profile.phone}</span>}
+                {cv.profile.email && <span className="flex items-center gap-1.5"><Mail className="h-3 w-3" /> {cv.profile.email}</span>}
+                {cv.profile.address && <span className="flex items-center gap-1.5"><MapPin className="h-3 w-3" /> {cv.profile.address}</span>}
+              </div>
+            </header>
+
+            <div className="mt-8 flex-1 space-y-8 overflow-hidden">
+              {cv.profile.summary && (
+                <section>
+                  <h4 className="border-b border-slate-200 pb-1 text-[11px] font-bold uppercase tracking-widest text-slate-900">Profil</h4>
+                  <p className="mt-3 text-[10px] leading-relaxed text-slate-600">{cv.profile.summary}</p>
+                </section>
+              )}
+
+              <div className="grid grid-cols-2 gap-10">
+                <div className="space-y-8">
+                  {experiences.length > 0 && (
+                    <section>
+                      <h4 className="border-b border-slate-200 pb-1 text-[11px] font-bold uppercase tracking-widest text-slate-900">Expérience</h4>
+                      <div className="mt-4 space-y-5">
+                        {experiences.map((e) => (
+                          <article key={e.id}>
+                            <div className="flex justify-between items-baseline">
+                              <h5 className="text-[11px] font-bold text-slate-900">{e.role || e.position}</h5>
+                              <span className="text-[9px] font-bold text-slate-400">
+                                {e.start ? fmtDate(e.start) : ''}{e.is_current ? ' - Présent' : e.end ? ` - ${fmtDate(e.end)}` : ''}
+                              </span>
+                            </div>
+                            <p className="text-[9px] font-bold text-slate-500 uppercase">{e.company}</p>
+                            {e.description && <p className="mt-1.5 text-[9px] leading-relaxed text-slate-600 whitespace-pre-line line-clamp-4">{e.description}</p>}
+                          </article>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+                </div>
+
+                <div className="space-y-8">
+                  {cv.educations.length > 0 && (
+                    <section>
+                      <h4 className="border-b border-slate-200 pb-1 text-[11px] font-bold uppercase tracking-widest text-slate-900">Formation</h4>
+                      <div className="mt-4 space-y-5">
+                        {cv.educations.map((e) => (
+                          <article key={e.id}>
+                            <div className="flex justify-between items-baseline">
+                              <h5 className="text-[11px] font-bold text-slate-900">{e.title}</h5>
+                              <span className="text-[9px] font-bold text-slate-400">
+                                {e.start ? fmtDate(e.start) : ''}{e.is_current ? ' - Présent' : e.end ? ` - ${fmtDate(e.end)}` : ''}
+                              </span>
+                            </div>
+                            <p className="text-[9px] font-bold text-slate-500 uppercase">{e.school}</p>
+                          </article>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  <section className="space-y-6">
+                    {cv.skills.filter(Boolean).length > 0 && (
+                      <div>
+                        <h4 className="border-b border-slate-200 pb-1 text-[11px] font-bold uppercase tracking-widest text-slate-900">Compétences</h4>
+                        <p className="mt-3 text-[10px] leading-relaxed text-slate-600">
+                          {cv.skills.filter(Boolean).join(' • ')}
+                        </p>
+                      </div>
+                    )}
+
+                    {cv.languages.length > 0 && (
+                      <div>
+                        <h4 className="border-b border-slate-200 pb-1 text-[11px] font-bold uppercase tracking-widest text-slate-900">Langues</h4>
+                        <ul className="mt-3 space-y-1">
+                          {cv.languages.map((l) => (
+                            <li key={l.id} className="text-[10px] text-slate-600">
+                              <span className="font-bold text-slate-800">{l.name}</span>
+                              {l.level && <span className="text-slate-400"> — {l.level}</span>}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </section>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // MODERN THEME (Default)
   return (
     <div className="lg:sticky lg:top-24 lg:self-start">
       <div ref={ref} className="card-raised aspect-[1/1.414] overflow-hidden bg-paper-card">

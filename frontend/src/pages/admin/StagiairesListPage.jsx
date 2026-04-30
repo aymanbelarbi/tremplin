@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Search,
   Briefcase,
@@ -12,14 +12,18 @@ import {
   Printer,
   MapPin,
   Calendar,
+  Trash2,
+  Eye,
+  Download,
 } from 'lucide-react'
 import { EMPLOYMENT_LABELS } from '@/mocks/data'
-import { FILIERES } from '@/lib/filieres'
-import { listStagiaires, getStagiaire } from '@/api/admin'
+import { listStagiaires, getStagiaire, deleteStagiaire, downloadStagiairePdf } from '@/api/admin'
+import { useFilieres } from '@/hooks/useFilieres'
 import { normalizeStagiaire } from '@/lib/normalizers'
 import SectionHeader from '@/components/ui/SectionHeader'
 import Badge from '@/components/ui/Badge'
 import { toast } from 'sonner'
+import { CvPreview, toUi } from '@/pages/stagiaire/CvBuilderPage'
 
 export default function StagiairesListPage() {
   const [query, setQuery] = useState('')
@@ -27,12 +31,57 @@ export default function StagiairesListPage() {
   const [filiereFilter, setFiliereFilter] = useState('')
   const [promotionFilter, setPromotionFilter] = useState('')
   const [selectedId, setSelectedId] = useState(null)
+  const [viewCvId, setViewCvId] = useState(null)
 
   const { data: raw = [], isLoading } = useQuery({
     queryKey: ['admin', 'stagiaires'],
     queryFn: () => listStagiaires(),
   })
+  const { filieresList, isLoading: loadingFilieres } = useFilieres()
   const stagiaires = useMemo(() => raw.map(normalizeStagiaire), [raw])
+
+  const queryClient = useQueryClient()
+  const deleteMutation = useMutation({
+    mutationFn: (id) => deleteStagiaire(id),
+    onSuccess: (_, id) => {
+      toast.success('Stagiaire supprimé avec succès.')
+      queryClient.invalidateQueries({ queryKey: ['admin', 'stagiaires'] })
+      if (selectedId === id) {
+        setSelectedId(null)
+      }
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || 'Erreur lors de la suppression.')
+    },
+  })
+
+  function handleDelete(e, id) {
+    e.stopPropagation()
+    if (window.confirm('Voulez-vous vraiment supprimer ce stagiaire ? Cette action est irréversible et supprimera toutes ses données (CV, candidatures, etc.).')) {
+      deleteMutation.mutate(id)
+    }
+  }
+
+  const [downloadingId, setDownloadingId] = useState(null)
+
+  async function handleDownloadRowPdf(e, stagiaire) {
+    e.stopPropagation()
+    try {
+      setDownloadingId(stagiaire.id)
+      const blob = await downloadStagiairePdf(stagiaire.id)
+      const url = window.URL.createObjectURL(new Blob([blob]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `CV_${stagiaire.full_name.replace(/\s+/g, '_')}.pdf`)
+      document.body.appendChild(link)
+      link.click()
+      link.parentNode.removeChild(link)
+    } catch (err) {
+      toast.error('Le PDF n\'est pas encore généré pour ce stagiaire.')
+    } finally {
+      setDownloadingId(null)
+    }
+  }
 
   const list = useMemo(() => {
     return stagiaires.filter((s) => {
@@ -94,8 +143,8 @@ export default function StagiairesListPage() {
               value={filiereFilter}
               onChange={(e) => setFiliereFilter(e.target.value)}
             >
-              <option value="">Toutes filières</option>
-              {FILIERES.map((f) => (
+              <option value="">{loadingFilieres ? "Chargement..." : "Toutes filières"}</option>
+              {filieresList.map((f) => (
                 <option key={f} value={f}>{f}</option>
               ))}
             </select>
@@ -125,6 +174,7 @@ export default function StagiairesListPage() {
                 <Th>Emploi</Th>
                 <Th className="text-center">Candidatures</Th>
                 <Th>Inscrit le</Th>
+                <Th className="text-right">Actions</Th>
               </tr>
             </thead>
             <tbody>
@@ -132,7 +182,7 @@ export default function StagiairesListPage() {
                 <tr><td className="px-5 py-8 text-center text-ink-muted" colSpan={6}><Loader2 className="inline h-4 w-4 animate-spin" /> Chargement…</td></tr>
               )}
               {!isLoading && list.length === 0 && (
-                <tr><td className="px-5 py-8 text-center text-ink-muted" colSpan={6}>Aucun stagiaire.</td></tr>
+                <tr><td className="px-5 py-8 text-center text-ink-muted" colSpan={8}>Aucun stagiaire.</td></tr>
               )}
               {list.map((s) => {
                 const emp = EMPLOYMENT_LABELS[s.employment_status] || EMPLOYMENT_LABELS.looking
@@ -163,6 +213,47 @@ export default function StagiairesListPage() {
                     <Td className="text-ink-soft">
                       {s.created_at ? new Date(s.created_at).toLocaleDateString('fr-FR') : '—'}
                     </Td>
+                    <Td className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setViewCvId(s.id)
+                          }}
+                          className="rounded p-2 text-ink-subtle hover:bg-brand-50 hover:text-brand-600 transition-colors"
+                          title="Voir le CV"
+                          aria-label="Voir le CV"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={(e) => handleDownloadRowPdf(e, s)}
+                          disabled={downloadingId === s.id}
+                          className="rounded p-2 text-ink-subtle hover:bg-brand-50 hover:text-brand-600 transition-colors disabled:opacity-50"
+                          title="Télécharger le PDF"
+                          aria-label="Télécharger le PDF"
+                        >
+                          {downloadingId === s.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Download className="h-4 w-4" />
+                          )}
+                        </button>
+                        <button
+                          onClick={(e) => handleDelete(e, s.id)}
+                          disabled={deleteMutation.isPending && deleteMutation.variables === s.id}
+                          className="rounded p-2 text-ink-subtle hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-50"
+                          title="Supprimer le stagiaire"
+                          aria-label="Supprimer le stagiaire"
+                        >
+                          {deleteMutation.isPending && deleteMutation.variables === s.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                    </Td>
                   </tr>
                 )
               })}
@@ -172,6 +263,7 @@ export default function StagiairesListPage() {
       </div>
 
       {selectedId && <Drawer id={selectedId} onClose={() => setSelectedId(null)} />}
+      {viewCvId && <ViewCvModal id={viewCvId} onClose={() => setViewCvId(null)} />}
     </div>
   )
 }
@@ -191,6 +283,45 @@ function Drawer({ id, onClose }) {
     const win = window.open(url, '_blank', 'noopener,noreferrer')
     if (!win) {
       toast.error("Autorisez les pop-ups pour imprimer le CV.")
+    }
+  }
+
+  const [downloadingPdf, setDownloadingPdf] = useState(false)
+
+  async function handleDownloadPdf() {
+    try {
+      setDownloadingPdf(true)
+      const blob = await downloadStagiairePdf(id)
+      const url = window.URL.createObjectURL(new Blob([blob]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `CV_${stagiaire.full_name.replace(/\s+/g, '_')}.pdf`)
+      document.body.appendChild(link)
+      link.click()
+      link.parentNode.removeChild(link)
+    } catch (err) {
+      toast.error('Le PDF n\'est pas encore généré pour ce stagiaire.')
+    } finally {
+      setDownloadingPdf(false)
+    }
+  }
+
+  const queryClient = useQueryClient()
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteStagiaire(id),
+    onSuccess: () => {
+      toast.success('Stagiaire supprimé avec succès.')
+      queryClient.invalidateQueries(['admin', 'stagiaires'])
+      onClose()
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || 'Erreur lors de la suppression.')
+    },
+  })
+
+  function handleDelete() {
+    if (window.confirm('Voulez-vous vraiment supprimer ce stagiaire ? Cette action est irréversible et supprimera toutes ses données (CV, candidatures, etc.).')) {
+      deleteMutation.mutate()
     }
   }
 
@@ -252,6 +383,26 @@ function Drawer({ id, onClose }) {
                 <Printer className="h-4 w-4" />
                 Imprimer le CV
               </button>
+              <button
+                onClick={handleDownloadPdf}
+                disabled={downloadingPdf}
+                className="btn-outline w-full justify-center"
+              >
+                {downloadingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                Télécharger le PDF
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleteMutation.isPending}
+                className="btn-outline w-full justify-center text-red-600 ring-red-600/20 hover:bg-red-50 disabled:opacity-50"
+              >
+                {deleteMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+                Supprimer le stagiaire
+              </button>
             </div>
           </>
         )}
@@ -265,6 +416,51 @@ function Row({ Icon, label, value }) {
     <div className="flex items-center justify-between">
       <span className="inline-flex items-center gap-2 text-ink-subtle"><Icon className="h-3.5 w-3.5" />{label}</span>
       <span className="font-medium text-ink">{value}</span>
+    </div>
+  )
+}
+
+function ViewCvModal({ id, onClose }) {
+  const { data: raw, isLoading } = useQuery({
+    queryKey: ['admin', 'stagiaire', id],
+    queryFn: () => getStagiaire(id),
+  })
+
+  const stagiaire = raw ? normalizeStagiaire(raw) : null
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-ink/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative flex max-h-full w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-paper shadow-2xl">
+        <header className="flex shrink-0 items-center justify-between border-b border-ink/10 bg-paper-tint px-6 py-4">
+          <h2 className="display text-xl text-ink">
+            CV de <span className="text-brand-600">{stagiaire?.full_name || '...'}</span>
+          </h2>
+          <button
+            onClick={onClose}
+            className="rounded-full p-2 text-ink-subtle hover:bg-ink/10 hover:text-ink transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </header>
+
+        <div className="flex-1 overflow-y-auto bg-paper-tint/30 p-6">
+          {isLoading ? (
+            <div className="flex h-64 items-center justify-center text-ink-muted">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+          ) : !stagiaire?.cv ? (
+            <div className="flex h-64 flex-col items-center justify-center text-center text-ink-muted">
+              <p className="text-lg font-medium text-ink">Aucun CV</p>
+              <p className="text-sm">Ce stagiaire n'a pas encore créé son CV.</p>
+            </div>
+          ) : (
+            <div className="mx-auto max-w-[210mm] shadow-sm">
+              <CvPreview cv={toUi({ cvData: stagiaire.cv, profileData: { user: stagiaire.user, profile: stagiaire.profile } })} />
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

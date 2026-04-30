@@ -16,6 +16,7 @@ import DashboardPage from '@/pages/admin/DashboardPage'
 import OffresManagePage from '@/pages/admin/OffresManagePage'
 import StagiairesListPage from '@/pages/admin/StagiairesListPage'
 import CandidaturesManagePage from '@/pages/admin/CandidaturesManagePage'
+import FilieresManagePage from '@/pages/admin/FilieresManagePage'
 import CvPrintPage from '@/pages/admin/CvPrintPage'
 import ProtectedRoute from '@/features/auth/ProtectedRoute'
 import GuestRoute from '@/features/auth/GuestRoute'
@@ -73,6 +74,7 @@ export default function AppRoutes() {
         <Route path="/admin/offres" element={<OffresManagePage />} />
         <Route path="/admin/stagiaires" element={<StagiairesListPage />} />
         <Route path="/admin/candidatures" element={<CandidaturesManagePage />} />
+        <Route path="/admin/filieres" element={<FilieresManagePage />} />
         <Route path="/admin/stagiaires/:id/cv/print" element={<CvPrintPage />} />
       </Route>
 

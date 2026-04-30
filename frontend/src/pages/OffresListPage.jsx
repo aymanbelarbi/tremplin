@@ -10,7 +10,7 @@ import {
   Clock,
   Loader2,
 } from 'lucide-react'
-import { FILIERE_GROUPS } from '@/lib/filieres'
+import { useFilieres } from '@/hooks/useFilieres'
 import { listPublicOffers } from '@/api/offers'
 import { normalizeOffer } from '@/lib/normalizers'
 import GroupedSelect from '@/components/ui/GroupedSelect'
@@ -18,6 +18,7 @@ import GroupedSelect from '@/components/ui/GroupedSelect'
 export default function OffresListPage() {
   const [query, setQuery] = useState('')
   const [filiere, setFiliere] = useState('all')
+  const { filiereGroups, isLoading: loadingFilieres } = useFilieres()
 
   const { data: raw = [], isLoading } = useQuery({
     queryKey: ['offers', 'public', { query }],
@@ -65,15 +66,15 @@ export default function OffresListPage() {
             <GroupedSelect
               id="filiere-filter"
               label=""
-              placeholder="Toutes les filières"
+              placeholder={loadingFilieres ? "Chargement..." : "Toutes les filières"}
               groups={[
                 {
                   parent: 'Toutes les filières',
                   options: [{ label: 'Toutes les filières', value: 'all' }]
                 },
-                ...FILIERE_GROUPS.map((g) => ({
+                ...filiereGroups.map((g) => ({
                   parent: g.parent,
-                  options: g.options.map((o) => ({ label: o, value: `${g.parent} — ${o}` })),
+                  options: g.options.map((o) => ({ label: o, value: o })),
                 }))
               ]}
               value={filiere}

@@ -9,6 +9,7 @@ use App\Models\Cv;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class CvController extends Controller
 {
@@ -25,7 +26,7 @@ class CvController extends Controller
         $data = $request->validated();
 
         DB::transaction(function () use ($cv, $data, $user) {
-            $cv->fill(collect($data)->only(['title', 'summary', 'links'])->toArray());
+            $cv->fill(collect($data)->only(['title', 'summary', 'theme', 'links'])->toArray());
             $cv->save();
 
             if (array_key_exists('summary', $data)) {
@@ -98,5 +99,28 @@ class CvController extends Controller
             ['user_id' => $user->id],
             ['title' => 'CV · '.$user->full_name],
         );
+    }
+
+    public function uploadPdf(Request $request): JsonResponse
+    {
+        $request->validate([
+            'pdf' => ['required', 'file', 'mimes:pdf', 'max:20480'],
+        ]);
+
+        $user = $request->user();
+        $cv = $this->getOrCreate($user);
+
+        if ($cv->pdf_path) {
+            Storage::disk('local')->delete($cv->pdf_path);
+        }
+
+        $path = $request->file('pdf')->store('cv_pdfs', 'local');
+        $cv->pdf_path = $path;
+        $cv->save();
+
+        return response()->json([
+            'message' => 'PDF uploaded successfully',
+            'path' => $path,
+        ]);
     }
 }

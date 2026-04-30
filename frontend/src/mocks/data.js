@@ -6,3 +6,9 @@ export const EMPLOYMENT_LABELS = {
   employed: { label: 'Employé', tone: 'brand' },
 }
 
+export const STATUS_LABELS = {
+  pending: { label: 'En attente', tone: 'warning' },
+  accepted: { label: 'Acceptée', tone: 'success' },
+  refused: { label: 'Refusée', tone: 'danger' },
+}
+

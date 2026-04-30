@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\Admin\StagiaireController as AdminStagiaireControll
 use App\Http\Controllers\Api\Admin\StatsController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\Public\OfferController as PublicOfferController;
+use App\Http\Controllers\Api\Public\FiliereController as PublicFiliereController;
+use App\Http\Controllers\Api\Admin\FiliereController as AdminFiliereController;
 use App\Http\Controllers\Api\Stagiaire\ApplicationController as StagiaireApplicationController;
 use App\Http\Controllers\Api\Stagiaire\CvController;
 use App\Http\Controllers\Api\Stagiaire\ProfileController;
@@ -19,6 +21,9 @@ Route::prefix('v1')->group(function () {
     // Public offers
     Route::get('offers', [PublicOfferController::class, 'index']);
     Route::get('offers/{offer}', [PublicOfferController::class, 'show']);
+
+    // Public filieres
+    Route::get('filieres', [PublicFiliereController::class, 'index']);
 
     // Authenticated
     Route::middleware('auth:sanctum')->group(function () {
@@ -35,6 +40,7 @@ Route::prefix('v1')->group(function () {
 
             Route::get('me/cv', [CvController::class, 'show']);
             Route::put('me/cv', [CvController::class, 'update']);
+            Route::post('me/cv/pdf', [CvController::class, 'uploadPdf']);
 
             Route::get('me/applications', [StagiaireApplicationController::class, 'index']);
             Route::delete('me/applications/{application}', [StagiaireApplicationController::class, 'destroy']);
@@ -49,9 +55,12 @@ Route::prefix('v1')->group(function () {
 
             Route::get('stagiaires', [AdminStagiaireController::class, 'index']);
             Route::get('stagiaires/{stagiaire}', [AdminStagiaireController::class, 'show']);
+            Route::delete('stagiaires/{stagiaire}', [AdminStagiaireController::class, 'destroy']);
+            Route::get('stagiaires/{stagiaire}/cv/pdf', [AdminStagiaireController::class, 'downloadPdf']);
 
             Route::get('applications', [AdminApplicationController::class, 'index']);
 
+            Route::apiResource('filieres', AdminFiliereController::class)->only(['index', 'store', 'destroy']);
         });
     });
 

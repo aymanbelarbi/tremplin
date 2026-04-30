@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Save, Briefcase, Search, Loader2, Camera, X, Lock, Eye, EyeOff } from 'lucide-react'
-import { FILIERE_GROUPS } from '@/lib/filieres'
+import { useFilieres } from '@/hooks/useFilieres'
 import { toast } from 'sonner'
 import { getMyProfile, updateMyProfile, uploadPhoto, deletePhoto, changePassword } from '@/api/profile'
 import SectionHeader from '@/components/ui/SectionHeader'
@@ -42,6 +42,7 @@ export default function ProfilPage() {
     queryKey: ['me', 'profile'],
     queryFn: getMyProfile,
   })
+  const { filiereGroups, isLoading: loadingFilieres } = useFilieres()
   const [form, setForm] = useState(EMPTY)
   const [photoUrl, setPhotoUrl] = useState(null) // saved photo from server
   const [pendingPhoto, setPendingPhoto] = useState(null) // file to upload on save
@@ -262,10 +263,10 @@ export default function ProfilPage() {
                 <GroupedSelect
                   id="filiere"
                   label=""
-                  placeholder="Choisir votre filière"
-                  groups={FILIERE_GROUPS.map((g) => ({
+                  placeholder={loadingFilieres ? "Chargement..." : "Choisir votre filière"}
+                  groups={filiereGroups.map((g) => ({
                     parent: g.parent,
-                    options: g.options.map((o) => ({ label: o, value: `${g.parent} — ${o}` })),
+                    options: g.options.map((o) => ({ label: o, value: o })),
                   }))}
                   value={form.filiere || ''}
                   onChange={(v) => setForm({ ...form, filiere: v })}

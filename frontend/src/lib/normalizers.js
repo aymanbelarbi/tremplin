@@ -124,5 +124,7 @@ export function normalizeStagiaire(s) {
     applications_count: s.applications_count ?? 0,
     created_at: s.created_at,
     profile,
+    cv: s.cv || null,
+    user: s,
   }
 }

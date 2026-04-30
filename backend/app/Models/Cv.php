@@ -17,6 +17,7 @@ class Cv extends Model
         'user_id',
         'title',
         'summary',
+        'theme',
 
         'pdf_path',
         'is_finalized',

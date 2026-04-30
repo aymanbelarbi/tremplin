@@ -12,3 +12,5 @@ export const CITY_GROUPS = [
   { parent: 'Laâyoune-Sakia El Hamra', options: ['Laâyoune', 'Boujdour', 'Tarfaya', 'Es-Semara'] },
   { parent: 'Dakhla-Oued Ed-Dahab', options: ['Dakhla', 'Aousserd', 'Bir Gandouz'] },
 ]
+
+export const VILLES = CITY_GROUPS.flatMap((g) => g.options)

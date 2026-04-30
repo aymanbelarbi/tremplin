@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Plus,
@@ -12,8 +12,9 @@ import {
   Loader2,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { FILIERES, VILLES } from '@/mocks/data'
+import { VILLES } from '@/lib/cities'
 import { listAdminOffers, createOffer, updateOffer, deleteOffer } from '@/api/offers'
+import { useFilieres } from '@/hooks/useFilieres'
 import { normalizeOffer, denormalizeOffer } from '@/lib/normalizers'
 import SectionHeader from '@/components/ui/SectionHeader'
 import Badge from '@/components/ui/Badge'
@@ -211,12 +212,14 @@ function IconBtn({ children, label, onClick, danger }) {
 }
 
 function OfferModal({ initial, onClose, onSave }) {
+  const { filieresList, isLoading } = useFilieres()
+  const defaultFiliere = filieresList.length > 0 ? filieresList[0] : 'Autres'
   const [form, setForm] = useState(
     initial || {
       title: '',
       type: 'stage',
       company: '',
-      filiere: FILIERES[0],
+      filiere: defaultFiliere,
       city: VILLES[0],
       remote: 'Présentiel',
       duration: '3 mois',
@@ -225,6 +228,13 @@ function OfferModal({ initial, onClose, onSave }) {
       description: '',
     },
   )
+  
+  // Update filiere when list loads if no initial value
+  useEffect(() => {
+    if (!initial && form.filiere === 'Autres' && filieresList.length > 0) {
+      setForm((f) => ({ ...f, filiere: filieresList[0] }))
+    }
+  }, [filieresList, initial, form.filiere])
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -268,7 +278,11 @@ function OfferModal({ initial, onClose, onSave }) {
             </Field>
             <Field label="Filière">
               <select className="input w-full" value={form.filiere} onChange={(e) => setForm({ ...form, filiere: e.target.value })}>
-                {FILIERES.map((f) => <option key={f} value={f}>{f}</option>)}
+                {isLoading ? (
+                  <option value="">Chargement...</option>
+                ) : (
+                  filieresList.map((f) => <option key={f} value={f}>{f}</option>)
+                )}
               </select>
             </Field>
             <Field label="Ville">

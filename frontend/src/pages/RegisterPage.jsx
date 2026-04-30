@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { ArrowUpRight, Eye, EyeOff, Loader2 } from 'lucide-react'
-import { FILIERE_GROUPS } from '@/lib/filieres'
+import { useFilieres } from '@/hooks/useFilieres'
 import GroupedSelect from '@/components/ui/GroupedSelect'
 import { toast } from 'sonner'
 import { register as apiRegister } from '@/api/auth'
@@ -45,13 +45,20 @@ export default function RegisterPage() {
     formState: { errors },
   } = useForm({ resolver: zodResolver(schema) })
 
+  const { filiereGroups, isLoading: loadingFilieres } = useFilieres()
+
   async function onSubmit(values) {
     setLoading(true)
     try {
       const { user, token } = await apiRegister(values)
       setAuth({ user, token })
       toast.success('Compte créé ')
-      navigate('/inscription/emploi', { replace: true })
+      // Redirect based on user role
+      if (user.role === 'admin') {
+        navigate('/admin', { replace: true })
+      } else {
+        navigate('/inscription/emploi', { replace: true })
+      }
     } catch (err) {
       const resp = err?.response?.data
       if (resp?.errors) {
@@ -140,10 +147,10 @@ export default function RegisterPage() {
             <GroupedSelect
               id="filiere"
               label="Filière"
-              placeholder="Choisir votre filière"
-              groups={FILIERE_GROUPS.map((g) => ({
+              placeholder={loadingFilieres ? "Chargement..." : "Choisir votre filière"}
+              groups={filiereGroups.map((g) => ({
                 parent: g.parent,
-                options: g.options.map((o) => ({ label: o, value: `${g.parent} — ${o}` })),
+                options: g.options.map((o) => ({ label: o, value: o })),
               }))}
               value={watch('filiere') || ''}
               onChange={(v) => setValue('filiere', v, { shouldValidate: true })}

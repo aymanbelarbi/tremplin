@@ -6,6 +6,7 @@ import {
   LogOut,
   ClipboardList,
   Shield,
+  BookOpen,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { logout as apiLogout } from '@/api/auth'
@@ -20,6 +21,7 @@ const links = [
   { to: '/admin/offres', label: 'Offres', Icon: Briefcase },
   { to: '/admin/stagiaires', label: 'Stagiaires', Icon: Users },
   { to: '/admin/candidatures', label: 'Candidatures', Icon: ClipboardList },
+  { to: '/admin/filieres', label: 'Filières', Icon: BookOpen },
 ]
 
 export default function AdminLayout() {

@@ -17,6 +17,7 @@ class UpdateCvRequest extends FormRequest
         return [
             'title' => ['nullable', 'string', 'max:150'],
             'summary' => ['nullable', 'string', 'max:2000'],
+            'theme' => ['nullable', 'string', Rule::in(['classic', 'modern'])],
             'first_name' => ['nullable', 'string', 'max:100'],
             'last_name' => ['nullable', 'string', 'max:100'],
             'birth_date' => ['nullable', 'date'],
