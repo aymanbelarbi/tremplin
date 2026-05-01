@@ -55,7 +55,7 @@ export default function RegisterPage() {
       toast.success('Compte créé ')
       // Redirect based on user role
       if (user.role === 'admin') {
-        navigate('/admin', { replace: true })
+        navigate('/admin/dashboard', { replace: true })
       } else {
         navigate('/inscription/emploi', { replace: true })
       }

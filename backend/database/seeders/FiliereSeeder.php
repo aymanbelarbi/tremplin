@@ -17,10 +17,10 @@ class FiliereSeeder extends Seeder
                 'parent' => 'Technicien Spécialisé',
                 'options' => [
                     'Infrastructure Digitale',
-                    'Infrastructure Digitale option Systèmes et Réseaux',
-                    'Infrastructure Digitale option Cyber sécurité',
                     'Développement Digital',
+                    'Infrastructure Digitale option Systèmes et Réseaux',
                     'Développement Digital option Web Full Stack',
+                    'Infrastructure Digitale option Cyber sécurité',
                     'Electromécanique des Systèmes Automatisées',
                     'Génie électrique option Electromécanique des Systèmes Automatisés',
                     'Gestion des Entreprises',
@@ -49,10 +49,8 @@ class FiliereSeeder extends Seeder
 
         foreach ($groups as $group) {
             foreach ($group['options'] as $option) {
-                // The frontend previously used "{parent} — {option}"
-                $name = $group['parent'] . ' — ' . $option;
                 Filiere::firstOrCreate(
-                    ['name' => $name],
+                    ['name' => $option],
                     ['category' => $group['parent']]
                 );
             }
