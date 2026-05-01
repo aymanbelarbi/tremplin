@@ -60,7 +60,7 @@ Route::prefix('v1')->group(function () {
 
             Route::get('applications', [AdminApplicationController::class, 'index']);
 
-            Route::apiResource('filieres', AdminFiliereController::class)->only(['index', 'store', 'destroy']);
+            Route::apiResource('filieres', AdminFiliereController::class)->only(['index', 'store', 'update', 'destroy']);
         });
     });
 

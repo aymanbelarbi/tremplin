@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Trash2, Loader2, BookOpen, AlertCircle } from 'lucide-react'
+import { Plus, Trash2, Loader2, BookOpen, AlertCircle, Edit3 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useFilieres } from '@/hooks/useFilieres'
-import { addFiliere, deleteFiliere } from '@/api/admin'
+import { addFiliere, deleteFiliere, updateFiliere } from '@/api/admin'
 import SectionHeader from '@/components/ui/SectionHeader'
 
 export default function FilieresManagePage() {
@@ -11,6 +11,7 @@ export default function FilieresManagePage() {
   const { rawFilieres, isLoading, isError } = useFilieres()
   const [newName, setNewName] = useState('')
   const [newCategory, setNewCategory] = useState('')
+  const [editId, setEditId] = useState(null)
 
   const createMutation = useMutation({
     mutationFn: addFiliere,
@@ -25,6 +26,20 @@ export default function FilieresManagePage() {
     },
   })
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }) => updateFiliere(id, payload),
+    onSuccess: () => {
+      toast.success('Filière modifiée')
+      setEditId(null)
+      setNewName('')
+      setNewCategory('')
+      queryClient.invalidateQueries({ queryKey: ['filieres'] })
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || 'Erreur lors de la modification')
+    },
+  })
+
   const deleteMutation = useMutation({
     mutationFn: deleteFiliere,
     onSuccess: () => {
@@ -36,9 +51,15 @@ export default function FilieresManagePage() {
     },
   })
 
-  function handleAdd(e) {
+  function handleSubmit(e) {
     e.preventDefault()
     if (!newName.trim()) return
+
+    if (editId) {
+      updateMutation.mutate({ id: editId, payload: { name: newName, category: newCategory } })
+      return
+    }
+
     createMutation.mutate({ name: newName, category: newCategory })
   }
 
@@ -46,6 +67,18 @@ export default function FilieresManagePage() {
     if (window.confirm('Supprimer cette filière ?')) {
       deleteMutation.mutate(id)
     }
+  }
+
+  function startEdit(filiere) {
+    setEditId(filiere.id)
+    setNewName(filiere.name)
+    setNewCategory(filiere.category || '')
+  }
+
+  function cancelEdit() {
+    setEditId(null)
+    setNewName('')
+    setNewCategory('')
   }
 
   return (
@@ -98,13 +131,21 @@ export default function FilieresManagePage() {
                       <td className="px-5 py-4 font-medium text-ink">{f.name}</td>
                       <td className="px-5 py-4 text-ink-soft">{f.category || '—'}</td>
                       <td className="px-5 py-4 text-right">
-                        <button
-                          onClick={() => handleDelete(f.id)}
-                          disabled={deleteMutation.isPending}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-ink/10 text-ink-muted transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        <div className="inline-flex items-center gap-2 justify-end">
+                          <button
+                            onClick={() => startEdit(f)}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-ink/10 text-ink-muted transition-colors hover:border-ink/20 hover:bg-ink/5"
+                          >
+                            <Edit3 className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(f.id)}
+                            disabled={deleteMutation.isPending}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-ink/10 text-ink-muted transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -117,8 +158,10 @@ export default function FilieresManagePage() {
         {/* Add Form Section */}
         <div className="space-y-6 lg:sticky lg:top-24 lg:self-start">
           <div className="card-raised p-6">
-            <h3 className="display text-lg text-ink">Ajouter une filière</h3>
-            <form onSubmit={handleAdd} className="mt-4 space-y-4">
+            <h3 className="display text-lg text-ink">
+              {editId ? 'Modifier une filière' : 'Ajouter une filière'}
+            </h3>
+            <form onSubmit={handleSubmit} className="mt-4 space-y-4">
               <div>
                 <label className="label" htmlFor="filiere-name">Nom complet</label>
                 <input
@@ -140,18 +183,29 @@ export default function FilieresManagePage() {
                   onChange={(e) => setNewCategory(e.target.value)}
                 />
               </div>
-              <button
-                type="submit"
-                disabled={createMutation.isPending || !newName.trim()}
-                className="btn-primary w-full"
-              >
-                {createMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Plus className="h-4 w-4" />
+              <div className="flex flex-col gap-3">
+                <button
+                  type="submit"
+                  disabled={(editId ? updateMutation.isPending : createMutation.isPending) || !newName.trim()}
+                  className="btn-primary w-full"
+                >
+                  {(editId ? updateMutation.isPending : createMutation.isPending) ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="h-4 w-4" />
+                  )}
+                  {editId ? 'Enregistrer' : 'Ajouter'}
+                </button>
+                {editId && (
+                  <button
+                    type="button"
+                    onClick={cancelEdit}
+                    className="btn-secondary w-full"
+                  >
+                    Annuler
+                  </button>
                 )}
-                Ajouter
-              </button>
+              </div>
             </form>
           </div>
 

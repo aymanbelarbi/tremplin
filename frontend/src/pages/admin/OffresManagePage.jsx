@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { AnimatePresence, motion } from 'framer-motion'
 import {
   Plus,
   Search,
@@ -18,6 +19,7 @@ import { useFilieres } from '@/hooks/useFilieres'
 import { normalizeOffer, denormalizeOffer } from '@/lib/normalizers'
 import SectionHeader from '@/components/ui/SectionHeader'
 import Badge from '@/components/ui/Badge'
+import GroupedSelect from '@/components/ui/GroupedSelect'
 
 export default function OffresManagePage() {
   const queryClient = useQueryClient()
@@ -179,13 +181,15 @@ export default function OffresManagePage() {
         </div>
       </div>
 
-      {open && (
-        <OfferModal
-          initial={editing}
-          onClose={() => { setOpen(false); setEditing(null) }}
-          onSave={handleSave}
-        />
-      )}
+      <AnimatePresence mode="wait">
+        {open && (
+          <OfferModal
+            initial={editing}
+            onClose={() => { setOpen(false); setEditing(null) }}
+            onSave={handleSave}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -212,7 +216,7 @@ function IconBtn({ children, label, onClick, danger }) {
 }
 
 function OfferModal({ initial, onClose, onSave }) {
-  const { filieresList, isLoading } = useFilieres()
+  const { filieresList, filiereGroups, isLoading } = useFilieres()
   const defaultFiliere = filieresList.length > 0 ? filieresList[0] : 'Autres'
   const [form, setForm] = useState(
     initial || {
@@ -237,9 +241,28 @@ function OfferModal({ initial, onClose, onSave }) {
   }, [filieresList, initial, form.filiere])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-ink/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-2xl rounded-3xl bg-paper-card p-8 shadow-lift">
+    <motion.div
+      className="fixed inset-0 top-0 left-0 z-50 flex items-center justify-center overflow-y-auto"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+    >
+      <motion.div
+        className="fixed inset-0 top-0 left-0 w-screen h-screen min-h-screen bg-ink/40"
+        onClick={onClose}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.25 }}
+      />
+      <motion.div
+        className="relative w-full max-w-2xl rounded-3xl bg-paper-card p-8 shadow-lift"
+        initial={{ opacity: 0, y: 20, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 20, scale: 0.98 }}
+        transition={{ duration: 0.2 }}
+      >
         <div className="flex items-start justify-between">
           <div>
             <span className="kicker">{initial ? 'Modifier' : 'Nouvelle offre'}</span>
@@ -265,44 +288,61 @@ function OfferModal({ initial, onClose, onSave }) {
         >
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Titre">
-              <input className="input w-full" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+              <input className="input w-full" placeholder="Ex: Développeur React" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
             </Field>
             <Field label="Entreprise">
-              <input className="input w-full" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} />
+              <input className="input w-full" placeholder="Ex: Tech Solutions" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} />
             </Field>
             <Field label="Type">
-              <select className="input w-full" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
-                <option value="stage">Stage</option>
-                <option value="emploi">Emploi</option>
-              </select>
+              <GroupedSelect
+                id="offer-type"
+                placeholder="Choisir un type"
+                groups={[
+                  {
+                    parent: 'Type',
+                    options: [
+                      { label: 'Stage', value: 'stage' },
+                      { label: 'Emploi', value: 'emploi' },
+                    ],
+                  },
+                ]}
+                value={form.type}
+                onChange={(value) => setForm({ ...form, type: value })}
+              />
             </Field>
             <Field label="Filière">
-              <select className="input w-full" value={form.filiere} onChange={(e) => setForm({ ...form, filiere: e.target.value })}>
-                {isLoading ? (
-                  <option value="">Chargement...</option>
-                ) : (
-                  filieresList.map((f) => <option key={f} value={f}>{f}</option>)
-                )}
-              </select>
+              <GroupedSelect
+                id="offer-filiere"
+                placeholder={isLoading ? 'Chargement...' : 'Choisir une filière'}
+                groups={filiereGroups.map((g) => ({
+                  parent: g.parent,
+                  options: g.options.map((value) => ({ label: value, value })),
+                }))}
+                value={form.filiere}
+                onChange={(value) => setForm({ ...form, filiere: value })}
+              />
             </Field>
             <Field label="Ville">
-              <select className="input w-full" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })}>
-                {VILLES.map((v) => <option key={v} value={v}>{v}</option>)}
-              </select>
+              <GroupedSelect
+                id="offer-city"
+                placeholder="Choisir une ville"
+                groups={[
+                  {
+                    parent: 'Villes',
+                    options: VILLES.map((v) => ({ label: v, value: v })),
+                  },
+                ]}
+                value={form.city}
+                onChange={(value) => setForm({ ...form, city: value })}
+              />
             </Field>
-            <Field label="Durée / contrat">
-              <input className="input w-full" value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} />
-            </Field>
-            <Field label="Rémunération">
-              <input className="input w-full" value={form.salary} onChange={(e) => setForm({ ...form, salary: e.target.value })} placeholder="Ex : 3 500 MAD" />
-            </Field>
-            <Field label="Date de clôture">
+            <Field label="Dernière date">
               <input type="date" className="input w-full" value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} />
             </Field>
           </div>
 
           <Field label="Description">
-            <textarea rows={4} className="input w-full resize-none" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            <textarea rows={4} className="input w-full resize-none" placeholder="Décrivez les responsabilités, compétences requises, avantages..." value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           </Field>
 
           <div className="flex items-center justify-end gap-2 border-t border-ink/5 pt-5">
@@ -312,8 +352,8 @@ function OfferModal({ initial, onClose, onSave }) {
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }
 

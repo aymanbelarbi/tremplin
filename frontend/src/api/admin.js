@@ -31,6 +31,11 @@ export async function addFiliere(payload) {
   return data.data
 }
 
+export async function updateFiliere(id, payload) {
+  const { data } = await api.put(`/v1/admin/filieres/${id}`, payload)
+  return data.data
+}
+
 export async function deleteFiliere(id) {
   await api.delete(`/v1/admin/filieres/${id}`)
 }

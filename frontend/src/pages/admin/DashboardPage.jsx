@@ -87,11 +87,7 @@ export default function DashboardPage() {
             Vue d'ensemble de l'activité sur les 30 derniers jours.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button className="btn-outline">
-            <Clock className="h-4 w-4" />
-            30 derniers jours
-          </button>
+        <div>
           <Link to="/admin/offres" className="btn-primary">
             <span>Publier une offre</span>
             <ArrowUpRight className="h-4 w-4" />

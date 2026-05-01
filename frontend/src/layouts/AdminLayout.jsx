@@ -47,7 +47,7 @@ export default function AdminLayout() {
         className="pointer-events-none fixed inset-0 bg-noise opacity-60 mix-blend-multiply"
       />
 
-      <aside className="relative hidden w-72 shrink-0 flex-col border-r border-ink/10 bg-paper-card/70 p-6 backdrop-blur md:flex">
+      <aside className="fixed left-0 top-0 hidden h-screen w-72 shrink-0 flex-col border-r border-ink/10 bg-paper-card/70 p-6 backdrop-blur md:flex overflow-y-auto">
         <Link to="/admin/dashboard" className="flex items-center">
           <Logo />
         </Link>
@@ -119,7 +119,7 @@ export default function AdminLayout() {
         </div>
       </aside>
 
-      <main className="relative flex-1 overflow-x-hidden px-6 py-10 md:px-10">
+      <main className="relative w-full flex-1 overflow-x-hidden px-6 py-10 md:ml-72 md:px-10">
         <div className="mx-auto w-full max-w-5xl">
           <AnimatePresence mode="wait">
             <PageTransition key={location.pathname}>

@@ -8,9 +8,17 @@
   html {
     @apply antialiased;
     scroll-behavior: smooth;
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+    width: 100%;
   }
   body {
     @apply bg-paper text-ink dark:bg-slate-950 dark:text-slate-100;
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+    width: 100%;
     font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
     font-feature-settings: 'ss01', 'cv11';
   }

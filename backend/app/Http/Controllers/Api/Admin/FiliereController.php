@@ -27,6 +27,18 @@ class FiliereController extends Controller
         return response()->json(['data' => $filiere], 201);
     }
 
+    public function update(Request $request, Filiere $filiere): JsonResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255', 'unique:filieres,name,' . $filiere->id],
+            'category' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $filiere->update($data);
+
+        return response()->json(['data' => $filiere]);
+    }
+
     public function destroy(Filiere $filiere): JsonResponse
     {
         $filiere->delete();

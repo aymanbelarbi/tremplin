@@ -32,9 +32,13 @@ export default function LoginPage() {
       const { user, token } = await login(values)
       setAuth({ user, token })
       toast.success(`Bienvenue ${user.full_name}`)
-      const from = location.state?.from?.pathname
-      if (from) navigate(from, { replace: true })
-      else navigate(user.role === 'admin' ? '/admin' : '/espace/profil', { replace: true })
+      if (user.role === 'admin') {
+        navigate('/admin/dashboard', { replace: true })
+      } else {
+        const from = location.state?.from?.pathname
+        if (from) navigate(from, { replace: true })
+        else navigate('/espace/profil', { replace: true })
+      }
     } catch (err) {
       const msg = err?.response?.data?.message || 'Identifiants invalides'
       toast.error(msg)
