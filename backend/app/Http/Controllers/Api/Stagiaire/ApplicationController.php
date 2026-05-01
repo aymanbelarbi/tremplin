@@ -52,13 +52,9 @@ class ApplicationController extends Controller
             ]);
         }
 
-        $snapshot = $cv->load(['experiences', 'educations', 'skills', 'languages', 'certifications'])->toArray();
-
         $app = Application::create([
             'user_id' => $user->id,
             'offer_id' => $offer->id,
-            'cover_message' => $request->validated('cover_message'),
-            'cv_snapshot' => $snapshot,
         ]);
 
         $app->load('offer');

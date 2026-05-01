@@ -55,7 +55,7 @@ class User extends Authenticatable
 
     public function profile(): HasOne
     {
-        return $this->hasOne(StagiaireProfile::class);
+        return $this->hasOne(Profile::class);
     }
 
     public function cv(): HasOne

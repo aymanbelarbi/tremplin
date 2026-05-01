@@ -44,125 +44,15 @@ export default function CvPrintPage() {
   const educations = cv.educations || []
   const skills = cv.skills || []
   const languages = cv.languages || []
-  const certifications = cv.certifications || []
-  const internships = cv.internships || []
-  const loisirs = (profile.links || []).filter((l) => l?.label || l?.url)
-  const theme = cv.theme || 'modern'
+  const loisirs = (profile.loisirs || []).filter((l) => l?.label || l?.url)
 
-  if (theme === 'classic') {
-    return (
-      <div className="cv-print-root theme-classic">
-        <div className="cv-page">
-          <div className="p-12 flex flex-col h-full bg-white text-slate-800">
-            <header className="border-b-4 border-slate-900 pb-8 text-center">
-              <h1 className="font-serif text-5xl font-bold tracking-tight text-slate-900 uppercase">{stagiaire.full_name}</h1>
-              <p className="mt-4 text-xl font-medium tracking-[0.2em] text-slate-600 uppercase">{cv.title || profile.filiere || '...'}</p>
-              
-              <div className="mt-6 flex flex-wrap justify-center gap-x-10 gap-y-2 text-sm font-semibold text-slate-500">
-                {stagiaire.phone && <span>{stagiaire.phone}</span>}
-                {stagiaire.email && <span>{stagiaire.email}</span>}
-                {profile.city && <span>{profile.city}, Maroc</span>}
-              </div>
-            </header>
-
-            <div className="mt-12 flex-1 space-y-12">
-              {profile.bio && (
-                <section>
-                  <h2 className="border-b-2 border-slate-200 pb-2 text-lg font-bold uppercase tracking-widest text-slate-900">Profil</h2>
-                  <p className="mt-6 text-[15px] leading-relaxed text-slate-600">{profile.bio}</p>
-                </section>
-              )}
-
-              <div className="grid grid-cols-2 gap-16">
-                <div className="space-y-12">
-                  {experiences.length > 0 && (
-                    <section>
-                      <h2 className="border-b-2 border-slate-200 pb-2 text-lg font-bold uppercase tracking-widest text-slate-900">Expérience</h2>
-                      <div className="mt-8 space-y-8">
-                        {experiences.map((e) => (
-                          <article key={e.id}>
-                            <div className="flex justify-between items-baseline">
-                              <h3 className="text-[17px] font-bold text-slate-900">{e.position}</h3>
-                              <span className="text-xs font-bold text-slate-400">
-                                {e.start_date ? fmtDate(e.start_date) : ''} — {e.end_date ? fmtDate(e.end_date) : 'Présent'}
-                              </span>
-                            </div>
-                            <p className="text-sm font-bold text-slate-500 uppercase">{e.company}</p>
-                            {e.description && <p className="mt-3 text-[14px] leading-relaxed text-slate-600 whitespace-pre-line">{e.description}</p>}
-                          </article>
-                        ))}
-                      </div>
-                    </section>
-                  )}
-                </div>
-
-                <div className="space-y-12">
-                  {educations.length > 0 && (
-                    <section>
-                      <h2 className="border-b-2 border-slate-200 pb-2 text-lg font-bold uppercase tracking-widest text-slate-900">Formation</h2>
-                      <div className="mt-8 space-y-8">
-                        {educations.map((e) => (
-                          <article key={e.id}>
-                            <div className="flex justify-between items-baseline">
-                              <h3 className="text-[17px] font-bold text-slate-900">{e.degree}</h3>
-                              <span className="text-xs font-bold text-slate-400">
-                                {e.start_date ? fmtDate(e.start_date) : ''} — {e.end_date ? fmtDate(e.end_date) : 'Présent'}
-                              </span>
-                            </div>
-                            <p className="text-sm font-bold text-slate-500 uppercase">{e.school}</p>
-                          </article>
-                        ))}
-                      </div>
-                    </section>
-                  )}
-
-                  <section className="space-y-10">
-                    {skills.length > 0 && (
-                      <div>
-                        <h2 className="border-b-2 border-slate-200 pb-2 text-lg font-bold uppercase tracking-widest text-slate-900">Compétences</h2>
-                        <p className="mt-6 text-[15px] leading-relaxed text-slate-600">
-                          {skills.map(s => typeof s === 'string' ? s : s.name).join(' • ')}
-                        </p>
-                      </div>
-                    )}
-
-                    {languages.length > 0 && (
-                      <div>
-                        <h2 className="border-b-2 border-slate-200 pb-2 text-lg font-bold uppercase tracking-widest text-slate-900">Langues</h2>
-                        <ul className="mt-6 space-y-3">
-                          {languages.map((l) => (
-                            <li key={l.id} className="text-[15px] text-slate-600">
-                              <span className="font-bold text-slate-800">{l.name}</span>
-                              {l.level && <span className="text-slate-400"> — {l.level}</span>}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </section>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <style>{`
-          @page { size: A4; margin: 0; }
-          .cv-page { width: 210mm; min-height: 297mm; margin: 0 auto; }
-          @media print { .cv-page { margin: 0; } }
-          @media screen { .cv-page { margin: 20px auto; box-shadow: 0 0 20px rgba(0,0,0,0.1); } }
-        `}</style>
-      </div>
-    )
-  }
-
-  // MODERN THEME
   return (
     <div className="cv-print-root">
       <div className="cv-page">
         <div className="cv-grid-wrap">
           <header className="cv-topbar">
             <h1 className="cv-name">{stagiaire.full_name}</h1>
-            <p className="cv-headline">{cv.title || profile.filiere || ''}</p>
+            <p className="cv-headline">{profile.filiere || ''}</p>
           </header>
 
           <div className="cv-grid">
@@ -213,10 +103,10 @@ export default function CvPrintPage() {
                 </div>
               )}
 
-              {allExperiences.length > 0 && (
+              {experiences.length > 0 && (
                 <div className="cv-section">
                   <h2 className="cv-main-title">Expérience</h2>
-                  {allExperiences.map((e) => (
+                  {experiences.map((e) => (
                     <article key={e.id} className="cv-entry">
                       <h3 className="cv-entry-date">{fmtDate(e.start_date)}{e.end_date ? ` - ${fmtDate(e.end_date)}` : ''}</h3>
                       <p className="cv-entry-sub">{e.position}{e.company ? ` — ${e.company}` : ''}</p>

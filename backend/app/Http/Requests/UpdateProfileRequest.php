@@ -24,14 +24,13 @@ class UpdateProfileRequest extends FormRequest
             'job_start_date' => ['sometimes', 'nullable', 'date', 'before_or_equal:today'],
             'birth_date' => ['sometimes', 'nullable', 'date', 'before:today'],
             'city' => ['sometimes', 'nullable', 'string', 'max:100'],
-            'address' => ['sometimes', 'nullable', 'string', 'max:255'],
             'filiere' => ['sometimes', 'nullable', 'string', 'max:120'],
             'promotion' => ['sometimes', 'nullable', 'integer', 'digits:4', 'min:2000'],
             'bio' => ['sometimes', 'nullable', 'string', 'max:2000'],
 
-            'links' => ['sometimes', 'nullable', 'array'],
-            'links.*.label' => ['sometimes', 'string', 'max:50'],
-            'links.*.url' => ['sometimes', 'string', 'max:255', 'url'],
+            'loisirs' => ['sometimes', 'nullable', 'array'],
+            'loisirs.*.label' => ['sometimes', 'string', 'max:50'],
+            'loisirs.*.url' => ['sometimes', 'string', 'max:255', 'url'],
         ];
     }
 }

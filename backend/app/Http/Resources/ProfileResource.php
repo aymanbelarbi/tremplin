@@ -5,7 +5,7 @@ namespace App\Http\Resources;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
 
-class StagiaireProfileResource extends JsonResource
+class ProfileResource extends JsonResource
 {
     public function toArray($request): array
     {
@@ -22,11 +22,7 @@ class StagiaireProfileResource extends JsonResource
             'filiere' => $this->filiere,
             'promotion' => $this->promotion,
             'bio' => $this->bio,
-            'languages' => $this->languages,
-            'soft_skills' => $this->soft_skills,
-            'hard_skills' => $this->hard_skills,
-            'certifications' => $this->certifications,
-            'links' => $this->links,
+            'loisirs' => $this->loisirs,
             'profile_completed' => (bool) $this->profile_completed,
         ];
     }

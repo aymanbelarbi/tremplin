@@ -41,7 +41,7 @@ class StagiaireController extends Controller
     public function show(User $stagiaire): JsonResponse
     {
         abort_unless($stagiaire->role === Role::Stagiaire, 404);
-        $stagiaire->load(['profile', 'cv.experiences', 'cv.educations', 'cv.skills', 'cv.languages'])
+        $stagiaire->load(['profile', 'cv'])
             ->loadCount('applications');
 
         return response()->json([

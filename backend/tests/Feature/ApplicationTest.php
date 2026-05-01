@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Enums\Role;
 use App\Models\Cv;
 use App\Models\Offer;
-use App\Models\StagiaireProfile;
+use App\Models\Profile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
@@ -30,19 +30,16 @@ class ApplicationTest extends TestCase
         Mail::fake();
         $offer = $this->makeOffer();
         $user = User::factory()->create(['role' => Role::Stagiaire]);
-        StagiaireProfile::create([
+        Profile::create([
             'user_id' => $user->id,
             'profile_completed' => true,
             'filiere' => 'Dev',
-            'niveau' => 'TS',
             'city' => 'Khemisset',
         ]);
         Cv::create(['user_id' => $user->id, 'is_finalized' => true]);
 
         $this->actingAs($user)
-            ->postJson('/api/v1/offers/'.$offer->id.'/apply', [
-                'cover_message' => 'Je suis motivé(e).',
-            ])
+            ->postJson('/api/v1/offers/'.$offer->id.'/apply')
             ->assertCreated()
             ->assertJsonPath('data.status', 'pending');
 
@@ -53,7 +50,7 @@ class ApplicationTest extends TestCase
     {
         $offer = $this->makeOffer();
         $user = User::factory()->create(['role' => Role::Stagiaire]);
-        StagiaireProfile::create(['user_id' => $user->id]);
+        Profile::create(['user_id' => $user->id]);
 
         $this->actingAs($user)
             ->postJson('/api/v1/offers/'.$offer->id.'/apply')
@@ -64,11 +61,10 @@ class ApplicationTest extends TestCase
     {
         $offer = $this->makeOffer();
         $user = User::factory()->create(['role' => Role::Stagiaire]);
-        StagiaireProfile::create([
+        Profile::create([
             'user_id' => $user->id,
             'profile_completed' => true,
             'filiere' => 'Dev',
-            'niveau' => 'TS',
             'city' => 'Khemisset',
         ]);
         Cv::create(['user_id' => $user->id, 'is_finalized' => false]);
@@ -83,11 +79,10 @@ class ApplicationTest extends TestCase
         Mail::fake();
         $offer = $this->makeOffer();
         $user = User::factory()->create(['role' => Role::Stagiaire]);
-        StagiaireProfile::create([
+        Profile::create([
             'user_id' => $user->id,
             'profile_completed' => true,
             'filiere' => 'Dev',
-            'niveau' => 'TS',
             'city' => 'Khemisset',
         ]);
         Cv::create(['user_id' => $user->id, 'is_finalized' => true]);

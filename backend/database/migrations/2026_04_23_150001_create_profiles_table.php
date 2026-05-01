@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
-        Schema::create('stagiaire_profiles', function (Blueprint $table) {
+        Schema::create('profiles', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->unique()->constrained()->cascadeOnDelete();
             $table->enum('employment_status', ['looking', 'employed'])->default('looking');
@@ -23,7 +23,7 @@ return new class extends Migration {
             $table->year('promotion')->nullable();
             $table->text('bio')->nullable();
 
-            $table->json('links')->nullable();
+            $table->json('loisirs')->nullable();
             $table->boolean('profile_completed')->default(false);
             $table->timestamps();
         });
@@ -31,6 +31,6 @@ return new class extends Migration {
 
     public function down(): void
     {
-        Schema::dropIfExists('stagiaire_profiles');
+        Schema::dropIfExists('profiles');
     }
 };

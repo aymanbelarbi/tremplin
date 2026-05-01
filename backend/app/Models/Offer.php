@@ -15,6 +15,7 @@ class Offer extends Model
     protected $fillable = [
         'title',
         'company_name',
+        'type',
 
         'description',
         'requirements',
@@ -31,7 +32,7 @@ class Offer extends Model
     protected function casts(): array
     {
         return [
-
+            'type' => \App\Enums\OfferType::class,
             'is_published' => 'boolean',
             'published_at' => 'datetime',
             'closes_at' => 'date',

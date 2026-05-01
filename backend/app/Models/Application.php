@@ -14,16 +14,7 @@ class Application extends Model
     protected $fillable = [
         'user_id',
         'offer_id',
-        'cv_snapshot',
-        'cover_message',
     ];
-
-    protected function casts(): array
-    {
-        return [
-            'cv_snapshot' => 'array',
-        ];
-    }
 
     public function user(): BelongsTo
     {

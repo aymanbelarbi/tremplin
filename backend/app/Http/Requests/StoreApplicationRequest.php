@@ -13,8 +13,6 @@ class StoreApplicationRequest extends FormRequest
 
     public function rules(): array
     {
-        return [
-            'cover_message' => ['nullable', 'string', 'max:2000'],
-        ];
+        return [];
     }
 }

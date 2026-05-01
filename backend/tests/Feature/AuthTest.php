@@ -27,7 +27,7 @@ class AuthTest extends TestCase
             ->assertJsonStructure(['user' => ['id', 'full_name', 'email', 'role'], 'token']);
 
         $this->assertDatabaseHas('users', ['email' => 'ayman@example.com', 'role' => 'stagiaire']);
-        $this->assertDatabaseHas('stagiaire_profiles', []);
+        $this->assertDatabaseHas('profiles', []);
     }
 
     public function test_registration_validates_required_fields(): void

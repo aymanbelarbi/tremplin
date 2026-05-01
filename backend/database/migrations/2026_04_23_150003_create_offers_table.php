@@ -11,6 +11,7 @@ return new class extends Migration {
             $table->id();
             $table->string('title', 180);
             $table->string('company_name', 150);
+            $table->string('type', 20)->default('emploi');
 
             $table->text('description');
             $table->text('requirements')->nullable();
@@ -25,6 +26,7 @@ return new class extends Migration {
             $table->timestamps();
 
             $table->index(['is_published', 'published_at']);
+            $table->index('type');
         });
     }
 

@@ -8,7 +8,7 @@ use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
 use App\Http\Resources\UserResource;
 use App\Mail\RegistrationConfirmedMail;
-use App\Models\StagiaireProfile;
+use App\Models\Profile;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -34,7 +34,7 @@ class AuthController extends Controller
                 'password' => Hash::make($data['password']),
                 'role' => Role::Stagiaire,
             ]);
-            StagiaireProfile::create([
+            Profile::create([
                 'user_id' => $user->id,
                 'employment_status' => $data['employment_status'] ?? 'looking',
                 'job_title' => $data['job_title'] ?? null,

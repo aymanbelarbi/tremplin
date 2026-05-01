@@ -7,7 +7,6 @@ import { getMyProfile, updateMyProfile, uploadPhoto, deletePhoto, changePassword
 import SectionHeader from '@/components/ui/SectionHeader'
 import Badge from '@/components/ui/Badge'
 import GroupedSelect from '@/components/ui/GroupedSelect'
-import ListEditor from '@/components/ui/ListEditor'
 
 const EMPTY = {
   first_name: '',
@@ -24,11 +23,7 @@ const EMPTY = {
   filiere: '',
   promotion: '',
   bio: '',
-  languages: [],
-  soft_skills: [],
-  hard_skills: [],
-  certifications: [],
-  links: [],
+  loisirs: [],
 }
 
 const EMPLOYMENT_BADGE = {
@@ -75,11 +70,7 @@ export default function ProfilPage() {
       filiere: p.filiere || '',
       promotion: p.promotion || '',
       bio: p.bio || '',
-      languages: p.languages || [],
-      soft_skills: p.soft_skills || [],
-      hard_skills: p.hard_skills || [],
-      certifications: p.certifications || [],
-      links: p.links || [],
+      loisirs: p.loisirs || [],
     }
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setForm(initial)
@@ -98,7 +89,7 @@ export default function ProfilPage() {
 
   const mutation = useMutation({
     mutationFn: updateMyProfile,
-    onSuccess: (resp) => {
+    onSuccess: () => {
       toast.success('Profil mis à jour.')
       setLastSavedForm(form)
       setPendingPhoto(null)
@@ -133,11 +124,7 @@ export default function ProfilPage() {
         filiere: form.filiere,
         promotion: form.promotion || null,
         bio: form.bio,
-        languages: form.languages.length ? form.languages : null,
-        soft_skills: form.soft_skills.length ? form.soft_skills : null,
-        hard_skills: form.hard_skills.length ? form.hard_skills : null,
-        certifications: form.certifications.length ? form.certifications : null,
-        links: form.links.length ? form.links : null,
+        loisirs: form.loisirs.length ? form.loisirs : null,
       })
     } catch {
       toast.error("Impossible d'enregistrer.")
@@ -150,9 +137,6 @@ export default function ProfilPage() {
   const cursusOk = Boolean(form.filiere)
   const empOk = form.employment_status === 'employed' ? Boolean(form.job_title && form.job_company) : true
   const aboutOk = Boolean(form.bio)
-  const langsOk = form.languages.length > 0
-  const skillsOk = form.hard_skills.length > 0 || form.soft_skills.length > 0
-  const certsOk = form.certifications.length > 0
   const completionSteps = [infoOk, cursusOk, empOk, aboutOk]
   const completion = Math.round((completionSteps.filter(Boolean).length / completionSteps.length) * 100)
 

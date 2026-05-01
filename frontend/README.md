@@ -1,16 +1,39 @@
-# React + Vite
+# Tremplin — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Interface stagiaire / admin pour la plateforme Tremplin (ISTA Khemisset).
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **React 18** (JSX) + **Vite**
+- **Tailwind CSS** — styling
+- **TanStack Query** — state serveur
+- **Zustand** — state client (auth)
+- **React Router v6** — routing
+- **Axios** — HTTP client
+- **Lucide React** — icons
+- **Sonner** — toasts
+- **html2canvas + jsPDF** — export CV PDF
 
-## React Compiler
+## Développement
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm install
+npm run dev        # → http://localhost:5173 (proxy /api → localhost:8000)
+npm run build      # production build
+npm run lint       # ESLint
+```
 
-## Expanding the ESLint configuration
+Le frontend attend le backend Laravel sur `http://localhost:8000` (configuré dans `vite.config.js` proxy).
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Structure `src/`
+
+```
+api/          → clients axios (auth, cv, profile, offers, admin…)
+components/   → ui/, layout/, brand/
+features/auth → ProtectedRoute, GuestRoute
+hooks/        → useFilieres
+layouts/      → PublicLayout, StagiaireLayout, AdminLayout
+lib/          → api.js, normalizers.js, cities.js, cn.js, jobTitles.js
+pages/        → stagiaire/, admin/
+routes/       → AppRoutes.jsx
+stores/       → authStore.js (Zustand + persist)

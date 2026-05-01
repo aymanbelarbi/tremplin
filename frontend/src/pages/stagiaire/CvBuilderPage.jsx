@@ -4,16 +4,10 @@ import {
   Plus,
   Trash2,
   GripVertical,
-  Mail,
-  Phone,
-  MapPin,
   Loader2,
   Save,
   Camera,
-  Globe,
   Download,
-  CalendarDays,
-  Heart,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -29,12 +23,10 @@ const EMPTY_CV = {
   profile: { first_name: '', last_name: '', birth_date: '', headline: '', email: '', phone: '', address: '', summary: '' },
   experiences: [],
   educations: [],
-  internships: [],
   skills: [],
   languages: [],
   certifications: [],
-  links: [],
-  theme: 'modern',
+  loisirs: [],
 }
 
 // Convert any date format (ISO timestamp, full date, etc.) to yyyy-MM for month inputs
@@ -50,14 +42,13 @@ function toMonth(v) {
   return `${y}-${m}`
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function toUi({ cvData, profileData }) {
   const u = profileData?.user || {}
   const p = profileData?.profile || {}
-  const rawTitle = cvData?.title || ''
-  const normalizedTitle = rawTitle.startsWith('CV · ') ? '' : rawTitle
 
-  const cvExperiences = (cvData?.experiences || []).map((e) => ({
-    id: `exp${e.id}`,
+  const cvExperiences = (cvData?.experiences || []).map((e, i) => ({
+    id: `exp_${i}`,
     role: e.position,
     company: e.company,
     start: toMonth(e.start_date),
@@ -83,62 +74,37 @@ export function toUi({ cvData, profileData }) {
     }
   }
 
-  // Merge profile languages (JSON array) with CV languages
-  const profileLangs = (p.languages || []).map((l, i) => ({ id: `l_profile_${i}`, name: l.name || '', level: l.level || '' }))
-  const cvLangs = (cvData?.languages || []).map((l, i) => ({ id: `l${i}`, name: l.name, level: l.level || '' }))
-  const existingLangNames = new Set(cvLangs.map((l) => l.name.toLowerCase()))
-  const mergedLangs = [
-    ...cvLangs,
-    ...profileLangs.filter((l) => l.name && !existingLangNames.has(l.name.toLowerCase())),
-  ]
+  const cvLangs = (cvData?.languages || []).map((l, i) => ({ id: `l_${i}`, name: l.name, level: l.level || '' }))
 
-  // Merge profile skills (hard_skills + soft_skills) with CV skills
-  const profileSkills = [...(p.hard_skills || []), ...(p.soft_skills || [])]
-  const cvSkills = (cvData?.skills || []).map((s) => s.name)
-  const existingSkillNames = new Set(cvSkills.map((s) => s.toLowerCase()))
-  const mergedSkills = [...cvSkills, ...profileSkills.filter((s) => s && !existingSkillNames.has(s.toLowerCase()))]
+  const cvSkills = cvData?.skills || []
 
-  // Merge certifications
-  const profileCerts = (p.certifications || []).map((c, i) => ({ id: `cert_profile_${i}`, name: c.name || '', year: c.year || '' }))
-  const cvCerts = (cvData?.certifications || []).map((c, i) => ({ id: `cert${i}`, name: c.name, year: c.year || '' }))
-  const existingCertNames = new Set(cvCerts.map((c) => c.name.toLowerCase()))
-  const mergedCerts = [...cvCerts, ...profileCerts.filter((c) => c.name && !existingCertNames.has(c.name.toLowerCase()))]
+  const cvCerts = (cvData?.certifications || []).map((c, i) => ({ id: `cert_${i}`, name: c.name, year: c.year || '' }))
 
   return {
-    title: cvData?.title || 'Mon CV',
-    theme: cvData?.theme || 'modern',
     photoUrl: p.photo_path || null,
     profile: {
       first_name: u.first_name || '',
       last_name: u.last_name || '',
       birth_date: p.birth_date || '',
-      headline: normalizedTitle,
+      headline: '',
       email: u.email || '',
       phone: u.phone || '',
-      address: p.address || p.city || '',
+      address: p.city || '',
       summary: cvData?.summary || p.bio || '',
     },
     experiences: cvExperiences,
-    educations: (cvData?.educations || []).map((e) => ({
-      id: `ed${e.id}`,
+    educations: (cvData?.educations || []).map((e, i) => ({
+      id: `ed_${i}`,
       title: e.degree,
       school: e.school,
       start: toMonth(e.start_date),
       end: e.end_date ? toMonth(e.end_date) : null,
       is_current: !e.end_date,
     })),
-    skills: mergedSkills,
-    languages: mergedLangs,
-    certifications: mergedCerts,
-    internships: (cvData?.internships || []).map((i) => ({
-      id: `int${i.id}`,
-      position: i.position,
-      company: i.company,
-      start: toMonth(i.start_date),
-      end: i.end_date ? toMonth(i.end_date) : null,
-      description: i.description || '',
-    })),
-    links: (cvData?.links || p.links || []).map((l, idx) => ({ id: `link_${idx}`, label: l.label || '', url: l.url || '' })),
+    skills: cvSkills,
+    languages: cvLangs,
+    certifications: cvCerts,
+    loisirs: (cvData?.loisirs || p.loisirs || []).map((l, idx) => ({ id: `loisir_${idx}`, label: l.label || '', url: l.url || '' })),
   }
 }
 
@@ -155,9 +121,7 @@ function toApi(cv) {
     return v
   }
   return {
-    title: cv.profile.headline || null,
     summary: cv.profile.summary || null,
-    theme: cv.theme || 'modern',
     first_name: cv.profile.first_name || null,
     last_name: cv.profile.last_name || null,
     address: cv.profile.address || null,
@@ -180,9 +144,8 @@ function toApi(cv) {
         school: e.school,
         start_date: normDate(e.start),
         end_date: e.is_current ? null : normDate(e.end),
-        is_current: !!e.is_current,
       })),
-    skills: cv.skills.filter(Boolean).map((name) => ({ name })),
+    skills: cv.skills.filter(Boolean),
     languages: cv.languages
       .filter((l) => l.name)
       .map((l) => {
@@ -192,19 +155,9 @@ function toApi(cv) {
     certifications: (cv.certifications || [])
       .filter((c) => c.name)
       .map((c) => ({ name: c.name, year: c.year || null })),
-    links: (cv.links || [])
+    loisirs: (cv.loisirs || [])
       .filter((l) => l.label || l.url)
       .map((l) => ({ label: l.label || null, url: l.url || null })),
-    internships: cv.internships
-      .filter((i) => i.position && i.company && i.start)
-      .map((i) => ({
-        position: i.position,
-        company: i.company,
-        start_date: normDate(i.start),
-        end_date: i.is_current ? null : normDate(i.end),
-        is_current: !!i.is_current,
-        description: i.description || null,
-      })),
   }
 }
 
@@ -388,7 +341,6 @@ export default function CvBuilderPage() {
             { id: 'certifications', label: 'Certifications' },
             { id: 'languages', label: 'Langues' },
             { id: 'loisirs', label: 'Loisirs' },
-            { id: 'design', label: 'Design' },
           ].map((t) => (
             <button
               key={t.id}
@@ -407,33 +359,6 @@ export default function CvBuilderPage() {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <div className="space-y-4">
-
-          {section === 'design' && (
-            <EditorCard title="Thème du CV">
-              <div className="grid grid-cols-2 gap-4">
-                {[
-                  { id: 'modern', label: 'Moderne', desc: 'Design épuré avec barre latérale.' },
-                  { id: 'classic', label: 'Classique', desc: 'Mise en page traditionnelle centrée.' },
-                ].map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => setCv({ ...cv, theme: t.id })}
-                    className={`flex flex-col gap-2 rounded-2xl border-2 p-4 text-left transition-all ${
-                      cv.theme === t.id
-                        ? 'border-brand-500 bg-brand-50'
-                        : 'border-ink/5 bg-paper-tint hover:border-ink/10'
-                    }`}
-                  >
-                    <span className={`text-sm font-bold ${cv.theme === t.id ? 'text-brand-700' : 'text-ink'}`}>
-                      {t.label}
-                    </span>
-                    <span className="text-[11px] leading-relaxed text-ink-muted">{t.desc}</span>
-                  </button>
-                ))}
-              </div>
-            </EditorCard>
-          )}
 
           {section === 'profile' && (
             <EditorCard title="Informations personnelles">
@@ -797,26 +722,26 @@ export default function CvBuilderPage() {
             <EditorCard
               title="Loisirs"
               action={
-                <button onClick={() => setCv({ ...cv, links: [...(cv.links || []), { id: `link_${Date.now()}`, label: '', url: '' }] })} className="btn-ghost text-xs">
+                <button onClick={() => setCv({ ...cv, loisirs: [...(cv.loisirs || []), { id: `loisir_${Date.now()}`, label: '', url: '' }] })} className="btn-ghost text-xs">
                   <Plus className="h-3.5 w-3.5" /> Ajouter
                 </button>
               }
             >
-              {(cv.links || []).map((l, i) => (
+              {(cv.loisirs || []).map((l, i) => (
                 <ListRow
                   key={l.id}
-                  onRemove={() => setCv({ ...cv, links: cv.links.filter((_, x) => x !== i) })}
-                  onDragStart={() => handleDragStart('links', i)}
-                  onDragEnter={() => handleDragEnter('links', i)}
+                  onRemove={() => setCv({ ...cv, loisirs: cv.loisirs.filter((_, x) => x !== i) })}
+                  onDragStart={() => handleDragStart('loisirs', i)}
+                  onDragEnter={() => handleDragEnter('loisirs', i)}
                   onDragEnd={handleDragEnd}
-                  isDragged={dragState.section === 'links' && dragState.startIndex === i}
-                  isDragOver={dragState.section === 'links' && dragState.overIndex === i && dragState.startIndex !== i}
+                  isDragged={dragState.section === 'loisirs' && dragState.startIndex === i}
+                  isDragOver={dragState.section === 'loisirs' && dragState.overIndex === i && dragState.startIndex !== i}
                 >
                   <Field label={`Loisir ${i + 1}`}>
                     <input className="input w-full" value={l.label} onChange={(ev) => {
-                      const arr = [...cv.links]
+                      const arr = [...cv.loisirs]
                       arr[i] = { ...l, label: ev.target.value }
-                      setCv({ ...cv, links: arr })
+                      setCv({ ...cv, loisirs: arr })
                     }} placeholder="Ex : Lecture, Football, Voyage…" />
                   </Field>
                 </ListRow>
@@ -927,112 +852,10 @@ function getAge(birthDate) {
 
 export const CvPreview = forwardRef(function CvPreview({ cv }, ref) {
   const experiences = cv.experiences || []
-  const loisirs = (cv.links || []).filter((l) => l.label || l.url)
+  const loisirs = (cv.loisirs || []).filter((l) => l.label || l.url)
   const fullName = [cv.profile.first_name, cv.profile.last_name].filter(Boolean).join(' ').trim()
   const age = getAge(cv.profile.birth_date)
-  const theme = cv.theme || 'modern'
 
-  if (theme === 'classic') {
-    return (
-      <div className="lg:sticky lg:top-24 lg:self-start">
-        <div ref={ref} className="card-raised aspect-[1/1.414] overflow-hidden bg-white p-10 text-slate-800 shadow-xl">
-          <div className="flex flex-col h-full">
-            <header className="border-b-2 border-slate-900 pb-6 text-center">
-              <h3 className="font-serif text-3xl font-bold tracking-tight text-slate-900 uppercase">{fullName}</h3>
-              <p className="mt-2 text-sm font-medium tracking-widest text-slate-600 uppercase">{cv.profile.headline || '...'}</p>
-              
-              <div className="mt-4 flex flex-wrap justify-center gap-x-6 gap-y-1 text-[10px] font-medium text-slate-500">
-                {cv.profile.phone && <span className="flex items-center gap-1.5"><Phone className="h-3 w-3" /> {cv.profile.phone}</span>}
-                {cv.profile.email && <span className="flex items-center gap-1.5"><Mail className="h-3 w-3" /> {cv.profile.email}</span>}
-                {cv.profile.address && <span className="flex items-center gap-1.5"><MapPin className="h-3 w-3" /> {cv.profile.address}</span>}
-              </div>
-            </header>
-
-            <div className="mt-8 flex-1 space-y-8 overflow-hidden">
-              {cv.profile.summary && (
-                <section>
-                  <h4 className="border-b border-slate-200 pb-1 text-[11px] font-bold uppercase tracking-widest text-slate-900">Profil</h4>
-                  <p className="mt-3 text-[10px] leading-relaxed text-slate-600">{cv.profile.summary}</p>
-                </section>
-              )}
-
-              <div className="grid grid-cols-2 gap-10">
-                <div className="space-y-8">
-                  {experiences.length > 0 && (
-                    <section>
-                      <h4 className="border-b border-slate-200 pb-1 text-[11px] font-bold uppercase tracking-widest text-slate-900">Expérience</h4>
-                      <div className="mt-4 space-y-5">
-                        {experiences.map((e) => (
-                          <article key={e.id}>
-                            <div className="flex justify-between items-baseline">
-                              <h5 className="text-[11px] font-bold text-slate-900">{e.role || e.position}</h5>
-                              <span className="text-[9px] font-bold text-slate-400">
-                                {e.start ? fmtDate(e.start) : ''}{e.is_current ? ' - Présent' : e.end ? ` - ${fmtDate(e.end)}` : ''}
-                              </span>
-                            </div>
-                            <p className="text-[9px] font-bold text-slate-500 uppercase">{e.company}</p>
-                            {e.description && <p className="mt-1.5 text-[9px] leading-relaxed text-slate-600 whitespace-pre-line line-clamp-4">{e.description}</p>}
-                          </article>
-                        ))}
-                      </div>
-                    </section>
-                  )}
-                </div>
-
-                <div className="space-y-8">
-                  {cv.educations.length > 0 && (
-                    <section>
-                      <h4 className="border-b border-slate-200 pb-1 text-[11px] font-bold uppercase tracking-widest text-slate-900">Formation</h4>
-                      <div className="mt-4 space-y-5">
-                        {cv.educations.map((e) => (
-                          <article key={e.id}>
-                            <div className="flex justify-between items-baseline">
-                              <h5 className="text-[11px] font-bold text-slate-900">{e.title}</h5>
-                              <span className="text-[9px] font-bold text-slate-400">
-                                {e.start ? fmtDate(e.start) : ''}{e.is_current ? ' - Présent' : e.end ? ` - ${fmtDate(e.end)}` : ''}
-                              </span>
-                            </div>
-                            <p className="text-[9px] font-bold text-slate-500 uppercase">{e.school}</p>
-                          </article>
-                        ))}
-                      </div>
-                    </section>
-                  )}
-
-                  <section className="space-y-6">
-                    {cv.skills.filter(Boolean).length > 0 && (
-                      <div>
-                        <h4 className="border-b border-slate-200 pb-1 text-[11px] font-bold uppercase tracking-widest text-slate-900">Compétences</h4>
-                        <p className="mt-3 text-[10px] leading-relaxed text-slate-600">
-                          {cv.skills.filter(Boolean).join(' • ')}
-                        </p>
-                      </div>
-                    )}
-
-                    {cv.languages.length > 0 && (
-                      <div>
-                        <h4 className="border-b border-slate-200 pb-1 text-[11px] font-bold uppercase tracking-widest text-slate-900">Langues</h4>
-                        <ul className="mt-3 space-y-1">
-                          {cv.languages.map((l) => (
-                            <li key={l.id} className="text-[10px] text-slate-600">
-                              <span className="font-bold text-slate-800">{l.name}</span>
-                              {l.level && <span className="text-slate-400"> — {l.level}</span>}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </section>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // MODERN THEME (Default)
   return (
     <div className="lg:sticky lg:top-24 lg:self-start">
       <div ref={ref} className="card-raised aspect-[1/1.414] overflow-hidden bg-paper-card">

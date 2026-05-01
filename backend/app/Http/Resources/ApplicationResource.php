@@ -10,7 +10,6 @@ class ApplicationResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'cover_message' => $this->cover_message,
             'applied_at' => $this->created_at,
             'offer' => $this->whenLoaded('offer', fn () => [
                 'id' => $this->offer->id,

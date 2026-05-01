@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\Role;
-use App\Models\StagiaireProfile;
+use App\Models\Profile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -26,7 +26,7 @@ class ProfileTest extends TestCase
     public function test_stagiaire_updates_profile(): void
     {
         $user = User::factory()->create(['role' => Role::Stagiaire]);
-        StagiaireProfile::create(['user_id' => $user->id]);
+        Profile::create(['user_id' => $user->id]);
 
         $this->actingAs($user)
             ->putJson('/api/v1/me/profile', [
@@ -40,7 +40,7 @@ class ProfileTest extends TestCase
             ->assertJsonPath('user.full_name', 'Sara K.')
             ->assertJsonPath('profile.city', 'Khemisset');
 
-        $this->assertDatabaseHas('stagiaire_profiles', [
+        $this->assertDatabaseHas('profiles', [
             'user_id' => $user->id,
             'filiere' => 'Développement informatique',
         ]);

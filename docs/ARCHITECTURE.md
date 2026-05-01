@@ -1,8 +1,8 @@
 # Document d'architecture — Plateforme Tremplin
 
-> Plateforme web de gestion des stagiaires et des offres d'emploi / stage
-> Stack : **React (JavaScript / JSX)** + **Tailwind CSS** (frontend) · **Laravel 11** (API REST) · **MySQL 8** · **Laravel Sanctum** (auth)
-> Document de conception rédigé à partir du cahier des charges fourni.
+> Plateforme web de gestion des stagiaires et des offres d'emploi / stage pour ISTA Khemisset
+> Stack : **React 18 (JSX)** + **Tailwind CSS** (frontend) · **Laravel 11** (API REST) · **MySQL 8** · **Laravel Sanctum** (auth)
+> Dernière mise à jour : mai 2026 — reflète le code tel qu'implémenté.
 
 ---
 
@@ -13,9 +13,9 @@
 ```
 ┌──────────────────────────────┐        HTTPS / JSON        ┌────────────────────────────┐
 │   Frontend React (SPA)       │ ─────────────────────────► │   Backend Laravel (API)    │
-│   - React 18 + Vite (JS/JSX) │ ◄───────────────────────── │   - Routes /api/*          │
-│   - React Router             │   Bearer token (Sanctum)   │   - Controllers / Services │
-│   - Tailwind CSS             │                            │   - Policies / Middleware  │
+│   - React 18 + Vite (JSX)   │ ◄───────────────────────── │   - Routes /api/v1/*       │
+│   - React Router v6          │   Bearer token (Sanctum)   │   - Controllers            │
+│   - Tailwind CSS             │                            │   - Middleware EnsureRole   │
 │   - TanStack Query (fetch)   │                            │                            │
 │   - Zustand (auth state)     │                            │                            │
 └──────────────────────────────┘                            └─────────────┬──────────────┘
@@ -26,57 +26,60 @@
                                                             │         MySQL 8            │
                                                             └────────────────────────────┘
 
-Stockage fichiers : storage/app/public (photos)
+Stockage fichiers :
+  - photos    → storage/app/public/photos   (accessible via Storage::url)
+  - CV PDFs   → storage/app/cv_pdfs        (téléchargement via route auth)
 ```
 
 ### 1.2 Structure du monorepo
 
 ```
-ista-khemisset-platform/
-├── backend/                    # Laravel 11
+tremplin/
+├── backend/                        # Laravel 11
 │   ├── app/
+│   │   ├── Enums/                  # Role, EmploymentStatus, OfferType
 │   │   ├── Http/
 │   │   │   ├── Controllers/Api/
-│   │   │   ├── Requests/
-│   │   │   ├── Resources/
-│   │   │   └── Middleware/
-│   │   ├── Models/
-│   │   ├── Policies/
-│   │   ├── Services/
-│   │   └── Enums/
+│   │   │   │   ├── AuthController
+│   │   │   │   ├── Public/         # OfferController, FiliereController
+│   │   │   │   ├── Stagiaire/      # ProfileController, CvController, ApplicationController
+│   │   │   │   └── Admin/          # StatsController, OfferController, StagiaireController, ApplicationController, FiliereController
+│   │   │   ├── Middleware/         # EnsureRole
+│   │   │   ├── Requests/           # RegisterRequest, StoreOfferRequest
+│   │   │   └── Resources/         # UserResource, StagiaireResource, ProfileResource, CvResource, OfferResource
+│   │   └── Models/                # User, Profile, Cv, Offer, Application, Filiere
 │   ├── database/
 │   │   ├── migrations/
-│   │   ├── factories/
-│   │   └── seeders/
+│   │   ├── seeders/               # AdminSeeder, FiliereSeeder
+│   │   └── factories/
 │   ├── routes/api.php
 │   └── tests/
-├── frontend/                   # React 18 + Vite (JavaScript / JSX)
+├── frontend/                       # React 18 + Vite (JSX)
 │   ├── src/
-│   │   ├── api/                # clients axios, hooks TanStack Query  (.js)
-│   │   ├── components/         # (.jsx)
-│   │   ├── features/           # auth, offers, applications, cv, admin (.jsx)
-│   │   ├── mocks/              # données statiques de démo (.js)
-│   │   ├── layouts/            # (.jsx)
-│   │   ├── pages/              # (.jsx)
-│   │   ├── routes/             # AppRoutes, ProtectedRoute, GuestRoute (.jsx)
-│   │   ├── stores/             # zustand (auth)  (.js)
-│   │   └── lib/                # (.js)
-│   ├── public/
-│   ├── jsconfig.json
-│   └── tailwind.config.js
-├── .github/workflows/ci.yml
+│   │   ├── api/                   # clients axios (.js)
+│   │   ├── components/            # ui/, layout/, brand/
+│   │   ├── features/auth/         # ProtectedRoute, GuestRoute, AuthVisual
+│   │   ├── hooks/                 # useFilieres
+│   │   ├── layouts/               # PublicLayout, StagiaireLayout, AdminLayout
+│   │   ├── lib/                   # api.js, cities.js, cn.js, jobTitles.js, normalizers.js
+│   │   ├── mocks/                 # data.js
+│   │   ├── pages/                 # toutes les pages (.jsx)
+│   │   ├── routes/                # AppRoutes.jsx
+│   │   └── stores/                # authStore.js (Zustand)
+│   └── public/
+├── docs/
 └── README.md
 ```
 
 ### 1.3 Principes directeurs
 
 - **Séparation claire** front ↔ back, communication uniquement en JSON via API REST.
-- **Authentification par token** (Sanctum personal access tokens) stocké côté front en mémoire + refresh via cookie httpOnly optionnel.
-- **Autorisation par rôle** (`stagiaire`, `admin`) via middleware + Policies Laravel.
-- **Règles métier au backend** (jamais de confiance dans le front) : un stagiaire ne peut postuler que si profil complet + CV finalisé (photo obligatoire).
-- **Recrutement direct** : le système ne gère plus de statuts (Accepté/Refusé). L'administration facilite la mise en relation en partageant les CVs aux entreprises.
-- **Suivi d'emploi** : chaque stagiaire indique s'il est employé ou en recherche, avec les détails du poste si applicable.
-- **Validation des uploads** stricte : MIME, taille max (5 Mo), extensions (.pdf, .jpg, .jpeg, .png).
+- **Authentification par token** (Sanctum personal access tokens) stocké côté front via Zustand persist.
+- **Autorisation par rôle** (`stagiaire`, `admin`) via middleware `EnsureRole`.
+- **Règles métier au backend** : un stagiaire ne peut postuler que si `profile_completed` + `cv.is_finalized`.
+- **Recrutement direct** : pas de statuts Accepté/Refusé. L'admin facilite la mise en relation en partageant les CVs.
+- **Suivi d'emploi** : chaque stagiaire indique s'il est employé ou en recherche, avec détails du poste si applicable.
+- **Validation des uploads** stricte : MIME, taille max (5 Mo), extensions (.jpg, .jpeg, .png pour photos, .pdf pour CVs).
 
 ---
 
@@ -85,13 +88,10 @@ ista-khemisset-platform/
 ### 2.1 Diagramme ER synthétique
 
 ```
-users ──1:1── stagiaire_profiles ──1:1── cvs
-  │                   │                   │
-  │                   │                   ├── 1:N cv_experiences
-  │                   │                   ├── 1:N cv_educations
-  │                   │                   ├── 1:N cv_skills
-  │                   │                   ├── 1:N cv_languages
-  │                   │                   └── 1:N cv_certifications
+users ──1:1── profiles ──1:1── cvs
+  │                │            │
+  │                │            (experiences, educations, skills,
+  │                │             languages, certifications, loisirs = JSON)
   │
   └──1:N applications ──N:1── offers
                                   │
@@ -104,18 +104,20 @@ users ──1:1── stagiaire_profiles ──1:1── cvs
 | Champ              | Type              | Contraintes                         |
 |--------------------|-------------------|-------------------------------------|
 | id                 | BIGINT UNSIGNED   | PK, AUTO_INCREMENT                  |
-| full_name          | VARCHAR(150)      | NOT NULL                            |
+| first_name         | VARCHAR(100)      | NOT NULL                            |
+| last_name          | VARCHAR(100)      | NOT NULL                            |
 | email              | VARCHAR(180)      | NOT NULL, UNIQUE                    |
 | phone              | VARCHAR(20)       | NULLABLE                            |
 | password           | VARCHAR(255)      | NOT NULL (bcrypt)                   |
-| role               | ENUM              | `stagiaire`, `admin` — NOT NULL     |
+| role               | ENUM              | `stagiaire`, `admin` — default `stagiaire` |
 | email_verified_at  | TIMESTAMP         | NULLABLE                            |
 | remember_token     | VARCHAR(100)      | NULLABLE                            |
 | created_at / updated_at | TIMESTAMP    |                                     |
 
 Index : `(role)`, `(email)`.
+Accessor : `full_name` = `first_name` + `last_name` (computed via Eloquent accessor).
 
-#### `stagiaire_profiles`
+#### `profiles`
 | Champ                | Type              | Contraintes                          |
 |----------------------|-------------------|--------------------------------------|
 | id                   | BIGINT UNSIGNED   | PK                                   |
@@ -131,7 +133,7 @@ Index : `(role)`, `(email)`.
 | filiere              | VARCHAR(120)      | NULLABLE (ex: Technicien Spécialisé — Développement Digital) |
 | promotion            | INT               | NULLABLE (année de sortie, ≥ 2000)    |
 | bio                 | TEXT               | NULLABLE (profil / résumé)           |
-| links               | JSON               | NULLABLE (`[{label, url}]`)          |
+| loisirs            | JSON               | NULLABLE (`[{label, url}]` — centres d'intérêt) |
 | profile_completed    | BOOLEAN           | NOT NULL, default false              |
 | created_at / updated_at | TIMESTAMP      |                                      |
 
@@ -141,9 +143,9 @@ Index : `(role)`, `(email)`.
 | id              | BIGINT UNSIGNED   | PK                                  |
 | title           | VARCHAR(180)      | NOT NULL                            |
 | company_name    | VARCHAR(150)      | NOT NULL                            |
-| type            | ENUM              | `emploi`, `stage`                   |
+| type            | VARCHAR(20)       | NOT NULL, default `emploi` (cast OfferType enum: `emploi`/`stage`) |
 | description     | TEXT              | NOT NULL                            |
-| requirements    | TEXT              | NULLABLE (contient la filière et les tags) |
+| requirements    | TEXT              | NULLABLE                            |
 | location        | VARCHAR(150)      | NULLABLE                            |
 | contract_type   | VARCHAR(80)       | NULLABLE (CDI, CDD, PFE, …)         |
 | duration        | VARCHAR(80)       | NULLABLE                            |
@@ -151,7 +153,7 @@ Index : `(role)`, `(email)`.
 | is_published    | BOOLEAN           | NOT NULL, default true              |
 | published_at    | TIMESTAMP         | NULLABLE                            |
 | closes_at       | DATE              | NULLABLE                            |
-| created_by      | BIGINT UNSIGNED   | FK users.id (admin)                 |
+| created_by      | BIGINT UNSIGNED   | FK users.id (admin), NULLABLE, ON DELETE SET NULL |
 | created_at / updated_at | TIMESTAMP |                                     |
 
 Index : `(is_published, published_at)`, `(type)`.
@@ -160,30 +162,17 @@ Index : `(is_published, published_at)`, `(type)`.
 | Champ            | Type              | Contraintes                         |
 |------------------|-------------------|-------------------------------------|
 | id               | BIGINT UNSIGNED   | PK                                  |
-| user_id          | BIGINT UNSIGNED   | FK users.id UNIQUE                  |
-| title            | VARCHAR(150)      | NULLABLE (intitulé recherché)       |
+| user_id          | BIGINT UNSIGNED   | FK users.id UNIQUE, ON DELETE CASCADE |
 | summary          | TEXT              | NULLABLE (résumé / objectif)        |
+| experiences      | JSON              | NULLABLE (`[{position, company, start_date, end_date, is_current, description}]`) |
+| educations       | JSON              | NULLABLE (`[{degree, school, start_date, end_date}]`) |
+| skills           | JSON              | NULLABLE (`["skill1", "skill2"]`)   |
+| languages        | JSON              | NULLABLE (`[{name, level}]`)        |
+| certifications   | JSON              | NULLABLE (`[{name, year}]`)         |
+| loisirs          | JSON              | NULLABLE (`[{label, url}]`)         |
 | pdf_path         | VARCHAR(255)      | NULLABLE (PDF généré)               |
 | is_finalized     | BOOLEAN           | default false                       |
 | created_at / updated_at | TIMESTAMP  |                                     |
-
-#### `cv_experiences`
-| id, cv_id (FK), position, company, city, start_date, end_date, is_current BOOL, description TEXT, sort_order INT |
-
-
-#### `cv_educations`
-| Champ | Type | Contraintes |
-|---|---|---|
-| id, cv_id (FK), degree, school, city, start_date, end_date, is_current BOOL, description, sort_order | | |
-
-#### `cv_skills`
-| id, cv_id (FK), name VARCHAR(100), sort_order |
-
-#### `cv_languages`
-| id, cv_id (FK), name, level VARCHAR(50) |
-
-#### `cv_certifications`
-| id, cv_id (FK), name VARCHAR(150), year YEAR, sort_order INT |
 
 #### `applications`
 | Champ         | Type              | Contraintes                        |
@@ -191,12 +180,17 @@ Index : `(is_published, published_at)`, `(type)`.
 | id            | BIGINT UNSIGNED   | PK                                 |
 | user_id       | BIGINT UNSIGNED   | FK users.id                        |
 | offer_id      | BIGINT UNSIGNED   | FK offers.id                       |
-| cv_snapshot   | JSON              | copie figée du CV au moment de la candidature |
-| cover_message | TEXT              | NULLABLE                           |
 | created_at / updated_at | TIMESTAMP |                                  |
 
 Contrainte : `UNIQUE(user_id, offer_id)` → un stagiaire ne postule qu'une fois par offre.
-Index : `(offer_id, status)`, `(user_id, status)`.
+
+#### `filieres`
+| Champ     | Type              | Contraintes                         |
+|-----------|-------------------|-------------------------------------|
+| id        | BIGINT UNSIGNED   | PK                                  |
+| name      | VARCHAR           | NOT NULL, UNIQUE                    |
+| category  | VARCHAR           | NULLABLE (Technicien Spécialisé, Technicien, Qualifié) |
+| created_at / updated_at | TIMESTAMP |                                     |
 
 #### `personal_access_tokens`
 Table standard fournie par **Laravel Sanctum**.
@@ -212,20 +206,19 @@ enum OfferType: string { case Emploi='emploi'; case Stage='stage'; }
 
 ## 3. API REST — Endpoints
 
-Toutes les réponses sont en JSON. Préfixe : `/api`.
+Toutes les réponses sont en JSON. Préfixe : `/api/v1`.
 Auth : `Authorization: Bearer <token>` (Sanctum) sauf endpoints publics.
-Pagination : `?page=1&per_page=15` → réponse `{ data: [...], meta: {...}, links: {...} }`.
 
 ### 3.1 Public
 
 | Méthode | Endpoint                 | Description                                  |
 |---------|--------------------------|----------------------------------------------|
-| POST    | `/auth/register`         | Inscription stagiaire (name, email, phone, password, password_confirmation, employment_status, job_*, filiere, promotion) |
+| POST    | `/auth/register`         | Inscription stagiaire (first_name, last_name, email, phone, password, password_confirmation, employment_status, job_*, filiere, promotion) |
 | POST    | `/auth/login`            | Connexion (email, password) → `{ user, token }` |
-| POST    | `/auth/forgot-password`  | Email de reset (optionnel v1)                |
-| GET     | `/offers`                | Liste offres publiées (filtres : `type`, `q`, `location`) |
+| GET     | `/offers`                | Liste offres publiées (filtres : `search`) |
 | GET     | `/offers/{id}`           | Détail d'une offre publiée                   |
-| GET     | `/offers/recent`         | 3 offres les plus récentes (page d'accueil)  |
+| GET     | `/filieres`              | Liste des filières (groupées par catégorie)  |
+| GET     | `/ping`                  | Health check → `{ ok: true }`                |
 
 ### 3.2 Authentifié (tout utilisateur connecté)
 
@@ -233,36 +226,42 @@ Pagination : `?page=1&per_page=15` → réponse `{ data: [...], meta: {...}, lin
 |---------|--------------------------|----------------------------------------------|
 | GET     | `/auth/me`               | Retourne l'utilisateur courant               |
 | POST    | `/auth/logout`           | Invalide le token courant                    |
-| PATCH   | `/auth/password`         | Change le mot de passe                       |
 
 ### 3.3 Stagiaire (`role=stagiaire`)
 
 | Méthode | Endpoint                                | Description                              |
 |---------|-----------------------------------------|------------------------------------------|
 | GET     | `/me/profile`                           | Profil stagiaire                         |
-| PUT     | `/me/profile`                           | Mise à jour profil (emploi, filière, etc.) |
+| PUT     | `/me/profile`                           | Mise à jour profil (emploi, filière, ville, bio, etc.) |
+| POST    | `/me/profile/photo`                     | Upload photo de profil                   |
+| DELETE  | `/me/profile/photo`                     | Supprimer photo de profil                |
+| PUT     | `/me/password`                          | Change le mot de passe                   |
 | GET     | `/me/cv`                                | CV + sections                            |
-| PUT     | `/me/cv`                                | Upsert CV complet (sync auto avec Profil/User : bio, address, birth_date, phone, names) |
-| POST    | `/me/cv/finalize`                       | Marque `is_finalized=true`                 |
-| POST    | `/offers/{id}/apply`                    | Postule (vérifie profil complet + CV finalisé + photo obligatoire) |
+| PUT     | `/me/cv`                                | Upsert CV complet (sync auto avec Profil/User : bio, birth_date, phone, names) |
+| POST    | `/me/cv/pdf`                            | Upload PDF généré côté client            |
+| POST    | `/offers/{id}/apply`                    | Postule (vérifie profil complet + CV finalisé) |
 | GET     | `/me/applications`                      | Liste mes candidatures                   |
-| GET     | `/me/applications/{id}`                 | Détail                                   |
+| DELETE  | `/me/applications/{id}`                 | Annuler une candidature                  |
 
 ### 3.4 Administration (`role=admin`)
 
 | Méthode | Endpoint                                      | Description                                   |
 |---------|-----------------------------------------------|-----------------------------------------------|
-| GET     | `/admin/dashboard`                            | Indicateurs agrégés (counts, graphiques)      |
-| GET     | `/admin/offers`                               | Liste (publiées + brouillons), filtres        |
+| GET     | `/admin/stats`                                | Indicateurs agrégés (counts, emploi par filière, candidatures 30j, activité récente) |
+| GET     | `/admin/offers`                               | Liste (publiées + brouillons), filtres `search` |
 | POST    | `/admin/offers`                               | Créer une offre                               |
 | GET     | `/admin/offers/{id}`                          | Détail                                        |
 | PUT     | `/admin/offers/{id}`                          | Modifier                                      |
 | DELETE  | `/admin/offers/{id}`                          | Supprimer                                     |
-| PATCH   | `/admin/offers/{id}/publish`                  | Publier / dépublier (toggle `is_published`)   |
 | GET     | `/admin/stagiaires`                           | Liste stagiaires (filtres : `q`, `employment_status`, `filiere`, `promotion`) |
 | GET     | `/admin/stagiaires/{id}`                      | Profil complet + CV                          |
-| GET     | `/admin/offers/{id}/applications`             | Candidatures pour une offre                   |
-| GET     | `/admin/applications/{id}`                    | Détail candidature (CV + snapshot)            |
+| DELETE  | `/admin/stagiaires/{id}`                      | Supprimer un stagiaire                       |
+| GET     | `/admin/stagiaires/{id}/cv/pdf`               | Télécharger le PDF du CV                     |
+| GET     | `/admin/applications`                         | Liste toutes les candidatures                 |
+| GET     | `/admin/filieres`                             | Liste des filières                            |
+| POST    | `/admin/filieres`                             | Créer une filière                             |
+| PUT     | `/admin/filieres/{id}`                        | Modifier une filière                          |
+| DELETE  | `/admin/filieres/{id}`                        | Supprimer une filière                         |
 
 ### 3.5 Format d'erreur
 
@@ -295,26 +294,21 @@ Codes HTTP : `200` OK · `201` Created · `204` No Content · `400` Bad Request 
 ### 4.2 Règles de gating pour candidature
 
 Un stagiaire ne peut postuler (`POST /offers/{id}/apply`) que si :
-1. `profile_completed = true` (Photo de profil obligatoire)
+1. `profile_completed = true` (filière + ville renseignées)
 2. CV existe et `is_finalized = true`
 3. Pas de candidature existante sur cette offre
 4. `offer.is_published = true` ET (`closes_at` IS NULL OU `closes_at ≥ today`)
 
-Chaque échec renvoie un `422` avec un code d'erreur métier explicite :
-```json
-{ "message": "Profil incomplet", "code": "profile_incomplete" }
-{ "message": "CV non finalisé", "code": "cv_not_finalized" }
-{ "message": "Déjà candidat", "code": "already_applied" }
-{ "message": "Offre fermée", "code": "offer_closed" }
-```
+Chaque échec renvoie un `422` avec un message d'erreur explicite dans `errors.profile` ou `errors.offer`.
 
 ### 4.3 Création du CV en temps réel
 
 - Le formulaire React maintient un state local complet du CV.
 - Chaque modification met à jour le state → l'aperçu (composant `<CvPreview />`) se re-rend instantanément.
-- Bouton **"Sauvegarder"** : PUT `/me/cv` + mutations par section (experiences/educations/…).
-- Bouton **"Finaliser"** : POST `/me/cv/finalize` → met `is_finalized=true`.
-- Modification ultérieure → `is_finalized` repasse à `false` jusqu'à nouvelle finalisation.
+- Bouton **"Sauvegarder"** : PUT `/me/cv` — envoie toutes les sections + sync auto avec Profil/User.
+- Bouton **"Télécharger PDF"** : génère le PDF côté client (`html2canvas` + `jsPDF`), puis l'upload via POST `/me/cv/pdf`.
+- La finalisation (`is_finalized`) se gère dans le payload du PUT `/me/cv`.
+- L'aperçu n'est visible que si le stagiaire a une photo de profil (sinon message "Photo requise").
 
 ### 4.4 Workflow candidature côté admin
 
@@ -328,33 +322,26 @@ L'admin accède à la liste des candidatures pour chaque offre. Il peut consulte
 
 ```
 Public
-  /                          HomePage              (hero + 3 offres récentes + CTA)
-  /offres                    OffersListPage
-  /offres/:id                OfferDetailPage
+  /                          HomePage
+  /offres                    OffresListPage
+  /offres/:id                OffreDetailPage
   /connexion                 LoginPage
   /inscription               RegisterPage
   /inscription/emploi        EmploymentStatusPage   (après register)
 
-Stagiaire (protégé role=stagiaire)
-  /espace                    StagiaireLayout
-    /espace/profil           ProfileEditPage
-    /espace/cv               CvBuilderPage             (form + preview live)
-    /espace/candidatures     MyApplicationsPage
-    /espace/candidatures/:id ApplicationDetailPage
+Stagiaire (protégé role=stagiaire, layout StagiaireLayout)
+  /espace/profil             ProfilPage
+  /espace/cv                 CvBuilderPage          (form + aperçu live)
+  /espace/candidatures       CandidaturesPage
 
-Admin (protégé role=admin)
-  /admin/connexion           AdminLoginPage
-  /admin                     AdminLayout
-    /admin/dashboard         DashboardPage
-    /admin/offres            OffersAdminPage
-    /admin/offres/nouvelle   OfferFormPage
-    /admin/offres/:id        OfferFormPage (édition)
-    /admin/offres/:id/candidatures  OfferApplicationsPage
-    /admin/stagiaires        StagiairesListPage
-    /admin/stagiaires/:id    StagiaireDetailPage
-    /admin/candidatures/:id  ApplicationReviewPage
+Admin (protégé role=admin, layout AdminLayout)
+  /admin/dashboard           DashboardPage
+  /admin/offres              OffresManagePage       (CRUD inline + modal)
+  /admin/stagiaires          StagiairesListPage     (liste + détail inline + CV modal)
+  /admin/candidatures        CandidaturesManagePage
+  /admin/filieres            FilieresManagePage
 
-404 / 403 pages dédiées.
+404 page dédiée (NotFoundPage).
 ```
 
 ### 5.2 Organisation `src/`
@@ -362,74 +349,68 @@ Admin (protégé role=admin)
 ```
 src/
 ├── api/
-│   ├── client.js                 # axios instance + interceptor token
-│   ├── auth.js
-│   ├── offers.js
-│   ├── applications.js
-│   ├── cv.js
-│   ├── profile.js
-│   └── admin/
-│       ├── offers.js
-│       ├── stagiaires.js
-│       └── applications.js
-├── stores/
-│   └── authStore.js              # Zustand : user, token, login/logout
-├── features/
-│   ├── auth/
-│   │   ├── RegisterForm.jsx
-│   │   ├── LoginForm.jsx
-│   │   └── ProtectedRoute.jsx
-│   ├── offers/
-│   │   ├── OfferCard.jsx
-│   │   ├── OfferFilters.jsx
-│   │   └── OfferBadge.jsx
-│   ├── cv/
-│   │   ├── CvBuilder.jsx
-│   │   ├── CvPreview.jsx
-│   │   ├── sections/
-│   │   │   ├── ExperiencesForm.jsx
-│   │   │   ├── EducationsForm.jsx
-│   │   │   ├── SkillsForm.jsx
-│   │   │   └── LanguagesForm.jsx
-│   │   └── templates/
-│   │       ├── ClassicTemplate.jsx
-│   │       └── ModernTemplate.jsx
-│   ├── applications/
-│   │   └── ApplicationsTable.jsx
-│   └── admin/
-│       └── StatCard.jsx
-│       └── OfferForm.jsx
-├── components/                   # UI générique
-│   ├── ui/
-│   │   ├── Button.jsx
-│   │   ├── Input.jsx
-│   │   ├── Select.jsx
-│   │   ├── Modal.jsx
-│   │   ├── Table.jsx
-│   │   ├── Badge.jsx
-│   │   ├── Toast.jsx
-│   │   └── EmptyState.jsx
-│   └── layout/
-│       ├── PublicNavbar.jsx
-│       ├── StagiaireSidebar.jsx
-│       ├── AdminSidebar.jsx
-│       └── Footer.jsx
+│   ├── admin.js                  # toutes les fonctions admin (stagiaires, stats, etc.)
+│   ├── applications.js           # applyToOffer, listMyApplications, cancelApplication
+│   ├── auth.js                   # register, login, logout, me
+│   ├── cv.js                     # getMyCv, updateMyCv, uploadCvPdf
+│   ├── filieres.js               # listFilieres
+│   ├── offers.js                 # listPublicOffers, getPublicOffer, listAdminOffers, CRUD
+│   └── profile.js                # getMyProfile, updateMyProfile, uploadPhoto, deletePhoto, changePassword
+├── components/
+│   ├── brand/
+│   │   └── Logo.jsx
+│   ├── layout/
+│   │   ├── PublicNavbar.jsx
+│   │   └── Footer.jsx
+│   └── ui/
+│       ├── Badge.jsx
+│       ├── DatePicker.jsx
+│       ├── GroupedSelect.jsx
+│       ├── ListEditor.jsx
+│       ├── PageTransition.jsx
+│       └── SectionHeader.jsx
+├── features/auth/
+│   ├── AuthVisual.jsx            # illustration side-panel for login/register
+│   ├── GuestRoute.jsx            # redirects authenticated users away
+│   └── ProtectedRoute.jsx        # role-based route protection
+├── hooks/
+│   └── useFilieres.js            # fetch + group filieres for selects
 ├── layouts/
 │   ├── PublicLayout.jsx
-│   ├── StagiaireLayout.jsx
-│   └── AdminLayout.jsx
-├── pages/                        # pages listées plus haut (.jsx)
+│   ├── StagiaireLayout.jsx       # sidebar: Profil, Mon CV, Mes candidatures
+│   └── AdminLayout.jsx           # sidebar: Tableau de bord, Offres, Stagiaires, Candidatures, Filières
+├── lib/
+│   ├── api.js                    # axios instance + Bearer token interceptor
+│   ├── cities.js                 # VILLES list for location selects
+│   ├── cn.js                     # classname utility
+│   ├── jobTitles.js              # job title suggestions by filiere
+│   └── normalizers.js            # normalizeOffer, normalizeStagiaire, denormalizeOffer, toUi
+├── mocks/
+│   └── data.js                   # EMPLOYMENT_LABELS static data
+├── pages/
+│   ├── HomePage.jsx
+│   ├── LoginPage.jsx
+│   ├── RegisterPage.jsx
+│   ├── EmploymentStatusPage.jsx
+│   ├── OffresListPage.jsx
+│   ├── OffreDetailPage.jsx
+│   ├── NotFoundPage.jsx
+│   ├── stagiaire/
+│   │   ├── ProfilPage.jsx        # profile edit + photo + password
+│   │   ├── CvBuilderPage.jsx     # full CV editor + CvPreview (exported) + toUi helper
+│   │   └── CandidaturesPage.jsx  # list + cancel
+│   └── admin/
+│       ├── DashboardPage.jsx     # KPIs + charts (Recharts)
+│       ├── OffresManagePage.jsx  # CRUD offers + modal form
+│       ├── StagiairesListPage.jsx # list + detail panel + CV viewer + PDF download
+│       ├── CandidaturesManagePage.jsx
+│       ├── FilieresManagePage.jsx
+│       └── CvPrintPage.jsx       # full-page CV print view
 ├── routes/
 │   └── AppRoutes.jsx
-├── lib/
-│   ├── formatters.js
-│   ├── validators.js             # schémas Zod (validation runtime, pas de types statiques)
-│   └── constants.js
-├── hooks/
-│   ├── useAuth.js
-│   ├── useOffers.js
-│   └── useCv.js
-├── App.jsx
+├── stores/
+│   └── authStore.js              # Zustand + persist: user, token, setAuth, setUser, logout
+├── App.jsx                       # BrowserRouter + QueryClientProvider + Toaster
 └── main.jsx
 ```
 
@@ -439,14 +420,15 @@ src/
 |-----------------------|---------------------------------|
 | Routing               | `react-router-dom` v6           |
 | State serveur         | `@tanstack/react-query`         |
-| State client (auth)   | `zustand`                       |
-| Formulaires           | `react-hook-form` + `zod`       |
+| State client (auth)   | `zustand` + `zustand/middleware/persist` |
+| Formulaires           | `react-hook-form` + `zod` (register page) |
 | HTTP                  | `axios`                         |
 | Icons                 | `lucide-react`                  |
-| Tables admin          | `@tanstack/react-table`         |
+| Animations            | `framer-motion`                 |
+| Charts admin          | `recharts`                      |
+| PDF export            | `html2canvas` + `jspdf`         |
 | Toasts                | `sonner`                        |
-| Dates                 | `date-fns`                      |
-| Upload preview        | natif + `react-dropzone`        |
+| Classnames            | `tailwind-merge` + `clsx` (via `cn.js`) |
 
 ---
 
@@ -494,7 +476,7 @@ Durée / Contrat / Salaire
 
 ### 6.4 Inscription (`/inscription`)
 Formulaire vertical :
-- Nom complet, Email, Téléphone
+- Prénom, Nom, Email, Téléphone
 - Filière (optgroup par famille), Promotion (année, nombre)
 - Mot de passe, Confirmation
 - [ Créer un compte ]
@@ -524,12 +506,12 @@ Layout 2 colonnes :
 ```
 ┌─ Tabs scrollables (100%) ─────────────────────────────────────────┐
 │ Informations personnelles · Formation · Expérience · Compétences · │
-│ Certifications · Langues · Loisirs                                │
+│ Certifications · Langues · Loisirs                                 │
 └──────────────────────────────────────────────────────────────────┘
 ┌─────── Formulaire (gauche) ──────┐  ┌─────── Aperçu live (droite) ──┐
 │                                   │  │                                │
-│ Champs du formulaire actif        │  │   [Rendu du CV template        │
-│ (par section, avec boutons        │  │    Classic A4, sidebar sombre] │
+│ Champs du formulaire actif        │  │   [Rendu du CV template A4]    │
+│ (par section,
 │  Ajouter/Supprimer par ligne)    │  │                                │
 │                                   │  │                                │
 │ [ Télécharger PDF ] [ Enregistrer ]│  │                                │
@@ -538,18 +520,19 @@ Layout 2 colonnes :
 
 ### 6.8 Mes candidatures (`/espace/candidatures`)
 Tableau :
-| Offre | Société | Date | Statut (badge) | Action |
-|-------|---------|------|----------------|--------|
-| …     | …       | …    | En attente     | [Voir] |
+| Offre | Société | Ville | Date | Action |
+|-------|---------|-------|------|--------|
+| …     | …       | …     | …    | [Annuler] |
 
 ### 6.9 Admin — Dashboard (`/admin/dashboard`)
 ```
 ┌─ Stats cards ──────────────────────────────────────────────┐
-│ [Stagiaires: 42] [Employés: 18] [Candidatures: 87] [Acceptées: 21] │
+│ [Stagiaires: 42] [Employés: 18] [En recherche: 24] [Candidatures: 87] [Offres: 12] │
 └────────────────────────────────────────────────────────────┘
-┌─ Graphiques ──────────────────┐  ┌─ Dernières candidatures ─┐
-│ Employés vs recherche/filière│  │ Liste des 5 dernières    │
-│ Répartition statuts (donut)   │  │                          │
+┌─ Graphiques ──────────────────┐  ┌─ Activité récente ────────┐
+│ Candidatures 30 derniers jours│  │ Liste des dernières      │
+│ Emploi par filière (barres)   │  │ actions (inscriptions,   │
+│                               │  │ candidatures, etc.)      │
 └───────────────────────────────┘  └──────────────────────────┘
 ```
 
@@ -557,7 +540,9 @@ Tableau :
 Table avec colonnes : Titre, Type, Société, Publié, Candidatures (count), Date, Actions (Publier/Dépublier, Éditer, Supprimer).
 Bouton **Nouvelle offre** → formulaire dans page ou modal.
 
-### 6.11 Admin — Détail stagiaire (`/admin/stagiaires/:id`)
+### 6.11 Admin — Stagiaires (`/admin/stagiaires`)
+Liste avec filtres (recherche, statut emploi, filière, promotion).
+Sélection d'un stagiaire → panneau de détail inline :
 ```
 ┌─── Infos personnelles ────┐  ┌─── Situation emploi ────┐
 │ Nom, email, tél, …         │  │ Employé / En recherche  │
@@ -565,20 +550,14 @@ Bouton **Nouvelle offre** → formulaire dans page ou modal.
 │                           │  │ (si employé)           │
 └───────────────────────────┘  └─────────────────────────┘
 ┌─── CV ──────────────────────────────────────────────┐
-│ Aperçu + lien PDF                                   │
+│ Aperçu dans modal + lien télécharger PDF             │
 └─────────────────────────────────────────────────────┘
-┌─── Candidatures ────────────────────────────────────┐
-│ Table avec liens vers /admin/candidatures/:id       │
-└─────────────────────────────────────────────────────┘
+Actions : [Supprimer] [Télécharger CV PDF]
 ```
 
-### 6.12 Admin — Review candidature (`/admin/candidatures/:id`)
-- Gauche : CV rendu
-- Droite : panneau de décision
-  - Statut actuel
-  - [ Accepter ]  [ Refuser ]
-  - Commentaire (textarea)
-  - Historique des changements
+### 6.12 Admin — Candidatures (`/admin/candidatures`)
+Tableau de toutes les candidatures avec détails offre + stagiaire.
+Pas de statut Accepté/Refusé — mise en relation directe.
 
 ---
 
@@ -587,24 +566,23 @@ Bouton **Nouvelle offre** → formulaire dans page ou modal.
 | Domaine               | Mesure                                                                 |
 |-----------------------|------------------------------------------------------------------------|
 | Mots de passe         | `bcrypt` (Laravel Hash), politique min 8 caractères + validation Zod   |
-| Auth                  | Sanctum tokens, expiration configurable, logout révoque le token       |
-| Autorisation          | Middleware `role:admin` / `role:stagiaire`, Policies par ressource     |
+| Auth                  | Sanctum tokens, logout révoque le token                                |
+| Autorisation          | Middleware `EnsureRole` avec paramètre `admin` / `stagiaire`           |
 | CSRF                  | SPA avec tokens Bearer → CSRF non requis sur `/api/*`                  |
 | CORS                  | Whitelist du domaine frontend dans `config/cors.php`                   |
 | Validation            | `FormRequest` Laravel sur chaque endpoint mutant                       |
-| Uploads               | Validation MIME + `mimes:pdf,jpg,jpeg,png`, taille ≤ 5 Mo, stockage hors webroot (`storage/app/private`) → accès via route signée |
+| Uploads               | Validation MIME + `mimes:jpg,jpeg,png` (photos), `.pdf` (CV), taille ≤ 5 Mo |
 | Injections SQL        | Eloquent / Query Builder systématiquement (jamais de raw SQL non paramétré) |
 | XSS                   | Échappement par défaut de React, pas de `dangerouslySetInnerHTML`      |
-| Rate limiting         | `throttle:60,1` sur `/api`, `throttle:5,1` sur `/auth/login` et `/auth/register` |
-| Logs                  | Pas de password / token en logs, masquage via `VarDumper`              |
+| Rate limiting         | `throttle:10,1` sur `/auth/login` et `/auth/register`                  |
 | RGPD / vie privée     | Données accessibles uniquement par le propriétaire et les admins     |
-| Secrets               | `.env` (non commité), secrets CI via GitHub Actions secrets            |
+| Secrets               | `.env` (non commité)                                                   |
 
 ---
 
 ## 8. Suivi d'emploi
 
-- **Champ** : `employment_status` sur `stagiaire_profiles` (enum `looking` / `employed`).
+- **Champ** : `employment_status` sur `profiles` (enum `looking` / `employed`).
 - **Si employed** : champs optionnels `job_title`, `job_company`, `job_city`, `job_start_date`.
 - **Inscription** : le stagiaire indique sa situation dès l'inscription (EmploymentStatusPage).
 - **Admin** : le dashboard affiche les stats employés vs en recherche par filière.
@@ -687,28 +665,25 @@ Chaque phase = 1 PR principale (+ PRs correctives si nécessaire).
 | # | Point                       | Choix retenu                                                                 | Justification                                        |
 |---|-----------------------------|------------------------------------------------------------------------------|------------------------------------------------------|
 | 1 | Langue UI                   | **Français uniquement**                                                      | CDC rédigé en FR, simple, i18n ajoutable plus tard   |
-| 2 | Emails transactionnels      | **Oui, minimal** : confirmation inscription + notification statut candidature | Dev via log, prod via SMTP                            |
-| 3 | Photo de profil             | **Obligatoire** pour postuler                                                | Sécurité et professionnalisme des CVs partagés       |
-| 4 | Templates CV                | **1 seul** (Classic) très soigné en v1                                       | Focus sur l'efficacité et la lisibilité             |
-| 5 | Export CV                   | **PDF Client-Side** via `html2canvas` + `jsPDF`                             | Assure une fidélité visuelle parfaite                 |
-| 6 | Notifications in-app        | **Toasts (sonner) + badge compteur** sur "Mes candidatures"                  | UX moderne sans complexité backend                   |
-| 7 | Thème visuel                | **Design libre, moderne** — couleurs OFPPT (vert #0A7A3B + neutre), typo Inter | Identité cohérente ISTA sans attendre une charte     |
-| 8 | Hébergement cible           | **Portable** : docker-compose prêt + doc déploiement VPS Ubuntu + Nginx      | L'école choisira l'hébergeur plus tard               |
+| 2 | Emails transactionnels      | **Non implémenté** en v1 (prévu : confirmation inscription)                 | Dev via log, prod via SMTP                            |
+| 3 | Photo de profil             | **Obligatoire** pour aperçu CV et postuler                                   | Professionnalisme des CVs partagés                   |
+| 4 | Templates CV                | **Template unique** (moderne, barre latérale)                               | Un seul design soigné, simplicité                    |
+| 5 | Export CV                   | **PDF Client-Side** via `html2canvas` + `jsPDF` + upload sur serveur         | Fidélité visuelle parfaite + stockage côté serveur   |
+| 6 | Notifications in-app        | **Toasts (sonner)** pour feedbacks d'action                                  | UX moderne sans complexité backend                   |
+| 7 | Thème visuel                | **Design libre, moderne** — palette brand verte, typo Inter                  | Identité cohérente ISTA                              |
+| 8 | Hébergement cible           | **Local uniquement** (XAMPP) — pas de déploiement public prévu               | Usage interne ISTA Khemisset                         |
 | 9 | Suivi d'emploi              | **Oui**, champ `employment_status` + détails du poste si employé            | Core value du projet : tracker l'insertion pro        |
 | 10| Compte admin seed (dev)     | `admin@tremplin.ma` / `tremplin --admin` (override via `.env`)               | Valeurs de dev, rotation obligatoire en prod         |
 | 11| Types d'offres              | **Emploi + stage** (conformément au CDC)                                     | Le CDC mentionne explicitement les deux              |
 | 12| Versioning API              | **`/api/v1/*`**                                                              | Permet d'ajouter v2 sans casser les clients          |
 
-### 12.1 Touches "modern 2026" ajoutées
+### 12.1 Touches "modern 2026" implémentées
 
-- **Skeleton loaders** pendant le chargement des listes (pas de spinners bruts).
 - **Toasts** (`sonner`) pour tous les feedbacks d'action.
 - **Animations légères** via `framer-motion` (transitions de page, micro-interactions).
-- **Dark mode** avec toggle dans le header (classe `dark:` Tailwind).
-- **Responsive mobile-first** systématique (nav → drawer sur mobile).
-- **PWA-ready** : `manifest.webmanifest` + icônes, installable sur mobile.
-- **Accessibilité** : focus-visible, labels ARIA, contraste AA.
-- **Meta SEO** de base sur les pages publiques (titre, description, OG tags).
+- **Responsive mobile-first** systématique.
+- **Accessibilité** : focus-visible, labels ARIA.
+- **Skeleton loaders** via états `isLoading` de TanStack Query.
 
 ---
 

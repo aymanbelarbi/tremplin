@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Api\Stagiaire;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateProfileRequest;
-use App\Http\Resources\StagiaireProfileResource;
+use App\Http\Resources\ProfileResource;
 use App\Http\Resources\UserResource;
-use App\Models\StagiaireProfile;
+use App\Models\Profile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -17,11 +17,11 @@ class ProfileController extends Controller
     public function show(Request $request): JsonResponse
     {
         $user = $request->user();
-        $profile = StagiaireProfile::firstOrCreate(['user_id' => $user->id]);
+        $profile = Profile::firstOrCreate(['user_id' => $user->id]);
 
         return response()->json([
             'user' => new UserResource($user),
-            'profile' => new StagiaireProfileResource($profile),
+            'profile' => new ProfileResource($profile),
         ]);
     }
 
@@ -41,11 +41,11 @@ class ProfileController extends Controller
         }
         $user->save();
 
-        $profile = StagiaireProfile::firstOrCreate(['user_id' => $user->id]);
+        $profile = Profile::firstOrCreate(['user_id' => $user->id]);
         $profile->fill(collect($data)->only([
             'employment_status', 'job_title', 'job_company', 'job_city', 'job_start_date',
-            'birth_date', 'address', 'city', 'filiere', 'promotion', 'bio',
-            'links',
+            'birth_date', 'city', 'filiere', 'promotion', 'bio',
+            'loisirs',
         ])->toArray());
         // Track progress marker
         $profile->profile_completed = (bool) ($profile->filiere && $profile->city);
@@ -54,7 +54,6 @@ class ProfileController extends Controller
         if (array_key_exists('bio', $data)) {
             $cv = \App\Models\Cv::firstOrCreate(
                 ['user_id' => $user->id],
-                ['title' => 'CV · ' . $user->full_name]
             );
             $cv->summary = $data['bio'];
             $cv->save();
@@ -62,7 +61,7 @@ class ProfileController extends Controller
 
         return response()->json([
             'user' => new UserResource($user->fresh()),
-            'profile' => new StagiaireProfileResource($profile->fresh()),
+            'profile' => new ProfileResource($profile->fresh()),
         ]);
     }
 
@@ -73,7 +72,7 @@ class ProfileController extends Controller
         ]);
 
         $user = $request->user();
-        $profile = StagiaireProfile::firstOrCreate(['user_id' => $user->id]);
+        $profile = Profile::firstOrCreate(['user_id' => $user->id]);
 
         // Delete old photo
         if ($profile->photo_path) {
@@ -86,14 +85,14 @@ class ProfileController extends Controller
 
         return response()->json([
             'user' => new UserResource($user->fresh()),
-            'profile' => new StagiaireProfileResource($profile->fresh()),
+            'profile' => new ProfileResource($profile->fresh()),
         ]);
     }
 
     public function deletePhoto(Request $request): JsonResponse
     {
         $user = $request->user();
-        $profile = StagiaireProfile::firstOrCreate(['user_id' => $user->id]);
+        $profile = Profile::firstOrCreate(['user_id' => $user->id]);
 
         if ($profile->photo_path) {
             Storage::disk('public')->delete($profile->photo_path);
@@ -103,7 +102,7 @@ class ProfileController extends Controller
 
         return response()->json([
             'user' => new UserResource($user->fresh()),
-            'profile' => new StagiaireProfileResource($profile->fresh()),
+            'profile' => new ProfileResource($profile->fresh()),
         ]);
     }
 

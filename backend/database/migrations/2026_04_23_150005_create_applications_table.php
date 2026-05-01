@@ -11,8 +11,6 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->foreignId('offer_id')->constrained()->cascadeOnDelete();
-            $table->json('cv_snapshot')->nullable();
-            $table->text('cover_message')->nullable();
             $table->timestamps();
 
             $table->unique(['user_id', 'offer_id']);
