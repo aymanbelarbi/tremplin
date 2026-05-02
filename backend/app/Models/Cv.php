@@ -15,6 +15,7 @@ class Cv extends Model
     protected $fillable = [
         'user_id',
         'summary',
+        'headline',
         'experiences',
         'educations',
         'skills',

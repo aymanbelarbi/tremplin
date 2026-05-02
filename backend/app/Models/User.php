@@ -34,6 +34,16 @@ class User extends Authenticatable
         return trim("{$this->first_name} {$this->last_name}");
     }
 
+    public function setFirstNameAttribute($value): void
+    {
+        $this->attributes['first_name'] = $value ? mb_convert_case(trim($value), MB_CASE_TITLE, 'UTF-8') : $value;
+    }
+
+    public function setLastNameAttribute($value): void
+    {
+        $this->attributes['last_name'] = $value ? mb_convert_case(trim($value), MB_CASE_TITLE, 'UTF-8') : $value;
+    }
+
     protected function casts(): array
     {
         return [

@@ -16,13 +16,9 @@ class Offer extends Model
         'title',
         'company_name',
         'type',
-
         'description',
         'requirements',
         'location',
-        'contract_type',
-        'duration',
-        'salary_range',
         'is_published',
         'published_at',
         'closes_at',

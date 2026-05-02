@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Trash2, Loader2, BookOpen, AlertCircle, Edit3 } from 'lucide-react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Plus, Trash2, Loader2, BookOpen, AlertCircle, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 import { useFilieres } from '@/hooks/useFilieres'
 import { addFiliere, deleteFiliere, updateFiliere } from '@/api/admin'
 import SectionHeader from '@/components/ui/SectionHeader'
+import IconBtn from '@/components/ui/IconBtn'
 
 export default function FilieresManagePage() {
   const queryClient = useQueryClient()
@@ -22,7 +23,7 @@ export default function FilieresManagePage() {
       queryClient.invalidateQueries({ queryKey: ['filieres'] })
     },
     onError: (err) => {
-      toast.error(err.response?.data?.message || 'Erreur lors de l\'ajout')
+      toast.error(err.response?.data?.message || "Erreur lors de l'ajout")
     },
   })
 
@@ -89,16 +90,16 @@ export default function FilieresManagePage() {
         description="Gérez les options de formation disponibles pour les stagiaires et les offres."
       />
 
-      <div className="grid gap-8 lg:grid-cols-[1fr_350px]">
+      <div className="flex flex-col gap-8 lg:flex-row">
         {/* List Section */}
-        <div className="space-y-4">
-          <div className="card-raised overflow-hidden">
+        <div className="min-w-0 flex-1">
+          <div className="card overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[600px] text-sm">
                 <thead>
                   <tr className="border-b border-ink/5 bg-paper-tint text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-subtle">
                     <th className="px-5 py-3">Filière</th>
-                    <th className="px-5 py-3">Catégorie / Niveau</th>
+                    <th className="px-5 py-3">Niveau</th>
                     <th className="px-5 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -127,24 +128,17 @@ export default function FilieresManagePage() {
                     </tr>
                   )}
                   {rawFilieres.map((f) => (
-                    <tr key={f.id} className="hover:bg-paper-tint/50">
+                    <tr key={f.id}>
                       <td className="px-5 py-4 font-medium text-ink">{f.name}</td>
                       <td className="px-5 py-4 text-ink-soft">{f.category || '—'}</td>
                       <td className="px-5 py-4 text-right">
-                        <div className="inline-flex items-center gap-2 justify-end">
-                          <button
-                            onClick={() => startEdit(f)}
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-ink/10 text-ink-muted transition-colors hover:border-ink/20 hover:bg-ink/5"
-                          >
-                            <Edit3 className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(f.id)}
-                            disabled={deleteMutation.isPending}
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-ink/10 text-ink-muted transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                        <div className="inline-flex items-center gap-1 justify-end">
+                          <IconBtn label="Modifier" onClick={() => startEdit(f)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </IconBtn>
+                          <IconBtn label="Supprimer" danger onClick={() => handleDelete(f.id)} disabled={deleteMutation.isPending}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </IconBtn>
                         </div>
                       </td>
                     </tr>
@@ -156,67 +150,69 @@ export default function FilieresManagePage() {
         </div>
 
         {/* Add Form Section */}
-        <div className="space-y-6 lg:sticky lg:top-24 lg:self-start">
-          <div className="card-raised p-6">
-            <h3 className="display text-lg text-ink">
-              {editId ? 'Modifier une filière' : 'Ajouter une filière'}
-            </h3>
-            <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-              <div>
-                <label className="label" htmlFor="filiere-name">Nom complet</label>
-                <input
-                  id="filiere-name"
-                  className="input mt-1.5 w-full"
-                  placeholder="Ex: Développement Digital"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <label className="label" htmlFor="filiere-cat">Catégorie / Niveau</label>
-                <input
-                  id="filiere-cat"
-                  className="input mt-1.5 w-full"
-                  placeholder="Ex: Technicien Spécialisé"
-                  value={newCategory}
-                  onChange={(e) => setNewCategory(e.target.value)}
-                />
-              </div>
-              <div className="flex flex-col gap-3">
-                <button
-                  type="submit"
-                  disabled={(editId ? updateMutation.isPending : createMutation.isPending) || !newName.trim()}
-                  className="btn-primary w-full"
-                >
-                  {(editId ? updateMutation.isPending : createMutation.isPending) ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Plus className="h-4 w-4" />
-                  )}
-                  {editId ? 'Enregistrer' : 'Ajouter'}
-                </button>
-                {editId && (
+        <div className="w-full lg:w-[350px] lg:shrink-0">
+          <div className="space-y-6 lg:sticky lg:top-24">
+            <div className="card p-6">
+              <h3 className="display text-lg text-ink">
+                {editId ? 'Modifier une filière' : 'Ajouter une filière'}
+              </h3>
+              <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+                <div>
+                  <label className="label" htmlFor="filiere-name">Nom complet</label>
+                  <input
+                    id="filiere-name"
+                    className="input mt-1.5 w-full"
+                    placeholder="Ex: Développement Digital"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="label" htmlFor="filiere-cat">Niveau</label>
+                  <input
+                    id="filiere-cat"
+                    className="input mt-1.5 w-full"
+                    placeholder="Ex: Technicien Spécialisé"
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col gap-3">
                   <button
-                    type="button"
-                    onClick={cancelEdit}
-                    className="btn-secondary w-full"
+                    type="submit"
+                    disabled={(editId ? updateMutation.isPending : createMutation.isPending) || !newName.trim()}
+                    className="btn-primary w-full"
                   >
-                    Annuler
+                    {(editId ? updateMutation.isPending : createMutation.isPending) ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Plus className="h-4 w-4" />
+                    )}
+                    {editId ? 'Enregistrer' : 'Ajouter'}
                   </button>
-                )}
-              </div>
-            </form>
-          </div>
-
-          <div className="card-ink p-6">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-400 text-ink">
-              <BookOpen className="h-5 w-5" />
+                  {editId && (
+                    <button
+                      type="button"
+                      onClick={cancelEdit}
+                      className="btn-secondary w-full"
+                    >
+                      Annuler
+                    </button>
+                  )}
+                </div>
+              </form>
             </div>
-            <p className="mt-4 font-display text-lg text-paper">Organisation</p>
-            <p className="mt-2 text-sm text-paper/70 leading-relaxed">
-              Les filières ajoutées ici apparaîtront immédiatement lors de l'inscription des nouveaux stagiaires et dans les filtres de recherche.
-            </p>
+
+            <div className="card-ink p-6">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-400 text-ink">
+                <BookOpen className="h-5 w-5" />
+              </div>
+              <p className="mt-4 font-display text-lg text-paper">Organisation</p>
+              <p className="mt-2 text-sm text-paper/70 leading-relaxed">
+                Les filières ajoutées ici apparaîtront immédiatement lors de l'inscription des nouveaux stagiaires et dans les filtres de recherche.
+              </p>
+            </div>
           </div>
         </div>
       </div>

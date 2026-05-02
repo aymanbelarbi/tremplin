@@ -34,7 +34,6 @@ export default function EmploymentStatusPage() {
   const {
     register,
     handleSubmit,
-    setValue,
     watch,
     setError,
     formState: { errors },
@@ -77,7 +76,7 @@ export default function EmploymentStatusPage() {
             Votre situation
           </h1>
           <p className="mt-2 text-sm text-ink-muted">
-            Avez-vous déjà trouvé un emploi ?
+            Avez-vous déjà trouvé un emploi ou un stage ?
           </p>
 
           <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-6">
@@ -99,7 +98,7 @@ export default function EmploymentStatusPage() {
                 />
                 <Search className="mx-auto h-8 w-8 text-brand" />
                 <span className="mt-2 block text-sm font-semibold text-ink">
-                  Je cherche un emploi
+                  Je cherche un emploi ou un stage
                 </span>
               </motion.label>
 
@@ -120,7 +119,7 @@ export default function EmploymentStatusPage() {
                 />
                 <Briefcase className="mx-auto h-8 w-8 text-brand" />
                 <span className="mt-2 block text-sm font-semibold text-ink">
-                  J'ai trouvé un emploi
+                  J'ai trouvé un emploi ou un stage
                 </span>
               </motion.label>
             </div>
@@ -136,57 +135,42 @@ export default function EmploymentStatusPage() {
                 >
                   <div className="space-y-4 rounded-2xl border border-ink/10 bg-ink/[0.02] p-5">
                     <p className="text-sm font-medium text-ink-soft">
-                      Détails de votre emploi
+                      Détails de votre emploi ou stage
                     </p>
-                    <div>
-                      <label className="label" htmlFor="job_title">Poste</label>
-                      <input
-                        id="job_title"
-                        className="input"
-                        placeholder="Développeur web, Technicien réseau…"
-                        {...register('job_title')}
-                      />
-                      {errors.job_title && (
-                        <p className="helper text-red-600">{errors.job_title.message}</p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="label" htmlFor="job_company">Entreprise</label>
-                      <input
-                        id="job_company"
-                        className="input"
-                        placeholder="Ex : Société X"
-                        {...register('job_company')}
-                      />
-                      {errors.job_company && (
-                        <p className="helper text-red-600">{errors.job_company.message}</p>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="label" htmlFor="job_city">Ville</label>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <label className="block">
+                        <span className="label">Poste</span>
                         <input
-                          id="job_city"
-                          className="input"
-                          placeholder="Ex : Khemisset"
-                          {...register('job_city')}
+                          className="input w-full"
+                          placeholder="Développeur web"
+                          {...register('job_title')}
                         />
-                        {errors.job_city && (
-                          <p className="helper text-red-600">{errors.job_city.message}</p>
+                        {errors.job_title && (
+                          <p className="helper text-red-600">{errors.job_title.message}</p>
                         )}
-                      </div>
-                      <div>
-                        <label className="label" htmlFor="job_start_date">Date de début</label>
+                      </label>
+                      <label className="block">
+                        <span className="label">Entreprise</span>
                         <input
-                          id="job_start_date"
+                          className="input w-full"
+                          placeholder="Nom de l'entreprise"
+                          {...register('job_company')}
+                        />
+                        {errors.job_company && (
+                          <p className="helper text-red-600">{errors.job_company.message}</p>
+                        )}
+                      </label>
+                      <label className="block sm:col-span-2">
+                        <span className="label">Début</span>
+                        <input
                           type="month"
-                          className="input"
+                          className="input w-full"
                           {...register('job_start_date')}
                         />
                         {errors.job_start_date && (
                           <p className="helper text-red-600">{errors.job_start_date.message}</p>
                         )}
-                      </div>
+                      </label>
                     </div>
                   </div>
                 </motion.div>

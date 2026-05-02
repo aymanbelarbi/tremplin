@@ -259,6 +259,8 @@ npm run lint     # ESLint
 | Symfony Process error (Windows) | Open PowerShell as Administrator or add antivirus exception. |
 | `composer install` fails on `ext-gd` | Enable GD extension in `php.ini` (uncomment `extension=gd`). |
 | `npm install` fails on `sharp` or `node-gyp` | Install build tools: `npm install -g windows-build-tools` (Windows) or `xcode-select --install` (macOS). |
+| Profile photos not showing | Photos are served via an API route (`/api/v1/storage/`), so **no `storage:link` symlink is needed**. If photos still don't appear, check that the `backend/storage/app/public/photos/` directory exists and has files. |
+| `storage:link` fails on Windows | Not required — the app serves files through a Laravel route instead of a symlink. |
 
 If you get stuck, open a [GitHub issue](https://github.com/aymanbelarbi/tremplin/issues) with the full error message + your platform (Windows/macOS/Linux) + PHP, Node, Composer versions.
 

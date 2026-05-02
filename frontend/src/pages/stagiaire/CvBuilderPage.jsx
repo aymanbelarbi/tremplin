@@ -17,7 +17,8 @@ import { getMyCv, updateMyCv, uploadCvPdf } from '@/api/cv'
 import { getMyProfile } from '@/api/profile'
 import SectionHeader from '@/components/ui/SectionHeader'
 import GroupedSelect from '@/components/ui/GroupedSelect'
-import { getJobTitlesForFiliere } from '@/lib/jobTitles'
+import { getSuggestedTitles } from '@/lib/jobTitles'
+import { useFilieres } from '@/hooks/useFilieres'
 
 const EMPTY_CV = {
   profile: { first_name: '', last_name: '', birth_date: '', headline: '', email: '', phone: '', address: '', summary: '' },
@@ -86,7 +87,7 @@ export function toUi({ cvData, profileData }) {
       first_name: u.first_name || '',
       last_name: u.last_name || '',
       birth_date: p.birth_date || '',
-      headline: '',
+      headline: cvData?.headline || '',
       email: u.email || '',
       phone: u.phone || '',
       address: p.city || '',
@@ -122,6 +123,7 @@ function toApi(cv) {
   }
   return {
     summary: cv.profile.summary || null,
+    headline: cv.profile.headline || null,
     first_name: cv.profile.first_name || null,
     last_name: cv.profile.last_name || null,
     address: cv.profile.address || null,
@@ -158,6 +160,7 @@ function toApi(cv) {
     loisirs: (cv.loisirs || [])
       .filter((l) => l.label || l.url)
       .map((l) => ({ label: l.label || null, url: l.url || null })),
+    is_finalized: true,
   }
 }
 
@@ -165,6 +168,7 @@ export default function CvBuilderPage() {
   const queryClient = useQueryClient()
   const cvQuery = useQuery({ queryKey: ['me', 'cv'], queryFn: getMyCv })
   const profileQuery = useQuery({ queryKey: ['me', 'profile'], queryFn: getMyProfile })
+  const { filiereGroups } = useFilieres()
 
   const [cv, setCv] = useState(EMPTY_CV)
   const [section, setSection] = useState('profile')
@@ -225,12 +229,14 @@ export default function CvBuilderPage() {
         const pageH = 297
         const imgW = canvas.width
         const imgH = canvas.height
-        const ratio = Math.min(pageW / imgW, pageH / imgH)
-        const w = imgW * ratio
-        const h = imgH * ratio
-        const x = (pageW - w) / 2
-        const y = (pageH - h) / 2
-        pdf.addImage(imgData, 'JPEG', x, y, w, h, undefined, 'FAST')
+        const ratio = pageW / imgW
+        const totalH = imgH * ratio
+        let yOffset = 0
+        while (yOffset < totalH) {
+          if (yOffset > 0) pdf.addPage()
+          pdf.addImage(imgData, 'JPEG', 0, -yOffset, pageW, totalH, undefined, 'FAST')
+          yOffset += pageH
+        }
         
         const blob = new Blob([pdf.output('arraybuffer')], { type: 'application/pdf' })
         const formData = new FormData()
@@ -314,7 +320,7 @@ export default function CvBuilderPage() {
         description="Éditez votre CV à gauche, visualisez l'aperçu en direct à droite. Exportez-le ensuite au format PDF."
         actions={
           <>
-            <button onClick={handleDownloadPdf} className="btn-ghost" title="Télécharger PDF" disabled={pdfLoading}>
+            <button onClick={handleDownloadPdf} className="btn-ghost" title="Télécharger PDF" disabled={pdfLoading || !hasPhoto}>
               {pdfLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
             </button>
             <button onClick={handleSave} className="btn-primary" disabled={mutation.isPending || !hasPhoto || !isDirty}>
@@ -396,13 +402,13 @@ export default function CvBuilderPage() {
                     <input
                       className="input w-full"
                       value={cv.profile.headline}
-                      placeholder="Technicien Spécialisé en Développement Digital, option Web Full Stack"
+                      placeholder="Technicien Spécialisé en Développement Digital option Web Full Stack"
                       onChange={(e) => setCv({ ...cv, profile: { ...cv.profile, headline: e.target.value } })}
                     />
-                    {getJobTitlesForFiliere(profileQuery.data?.profile?.filiere).length > 0 && (
+                    {getSuggestedTitles(profileQuery.data?.profile?.filiere, filiereGroups).length > 0 && (
                       <div className="mt-1.5 flex flex-wrap gap-1">
-                        {getJobTitlesForFiliere(profileQuery.data.profile.filiere).map((t) => (
-                          <button key={t} type="button" onClick={() => setCv({ ...cv, profile: { ...cv.profile, headline: t } })} className="rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-medium text-brand-700 hover:bg-brand-100">
+                        {getSuggestedTitles(profileQuery.data.profile.filiere, filiereGroups).map((t) => (
+                          <button key={t} type="button" onClick={() => setCv({ ...cv, profile: { ...cv.profile, headline: t } })} className="rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-medium text-brand-700 hover:bg-brand-100 text-left whitespace-normal">
                             {t}
                           </button>
                         ))}
@@ -752,7 +758,9 @@ export default function CvBuilderPage() {
         </div>
 
         {hasPhoto ? (
-          <CvPreview cv={cv} ref={cvRef} />
+          <div className="lg:sticky lg:top-24 lg:self-start">
+            <CvPreview cv={cv} ref={cvRef} />
+          </div>
         ) : (
           <div className="lg:sticky lg:top-24 lg:self-start">
             <div className="card-raised aspect-[1/1.414] flex flex-col items-center justify-center gap-4 bg-paper-card p-8 text-center">
@@ -857,19 +865,18 @@ export const CvPreview = forwardRef(function CvPreview({ cv }, ref) {
   const age = getAge(cv.profile.birth_date)
 
   return (
-    <div className="lg:sticky lg:top-24 lg:self-start">
-      <div ref={ref} className="card-raised aspect-[1/1.414] overflow-hidden bg-paper-card">
-        <div className="grid h-full grid-rows-[auto_1fr]">
+      <div ref={ref} className="card-raised flex min-h-[600px] flex-col overflow-hidden bg-paper-card">
+        <div className="grid flex-1 grid-rows-[auto_1fr]">
           <header className="border-b border-ink/10 px-6 pt-5 pb-6 text-center">
-            <h3 className="display text-[18px] leading-none tracking-tight text-ink">{fullName}</h3>
-            <p className="mt-2 text-[10px] font-semibold uppercase tracking-widest text-brand-700">{cv.profile.headline || '...'}</p>
+            <h3 className="display text-[18px] leading-none tracking-tight text-ink break-anywhere">{fullName}</h3>
+            <p className="mt-2 text-[10px] font-semibold uppercase tracking-widest text-brand-700 break-anywhere">{cv.profile.headline || '...'}</p>
           </header>
 
           <div className="flex h-full">
-          <aside className="relative flex flex-col border-r border-ink/10 bg-paper-tint/30 p-4 text-ink min-w-[35%] max-w-[45%] shrink-0 overflow-hidden">
+          <aside className="relative flex flex-col border-r border-ink/10 bg-paper-tint/30 p-4 text-ink w-[38%] shrink-0 overflow-hidden">
             <div className="flex flex-col items-center">
               {cv.photoUrl ? (
-                <img src={cv.photoUrl} alt="Photo" className="mb-5 h-20 w-20 rounded-full border-2 border-brand-700 object-cover shadow-sm" />
+                <img src={cv.photoUrl} alt="Photo" className="mb-5 h-20 w-20 rounded-full border-2 border-brand-700 object-cover object-top shadow-sm" />
               ) : (
                 <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-full border-2 border-brand-700 bg-brand-50 text-2xl font-bold text-brand-800 shadow-sm">
                   {[cv.profile.first_name, cv.profile.last_name].filter(Boolean).map((p) => p[0]).slice(0, 2).join('').toUpperCase()}
@@ -877,55 +884,52 @@ export const CvPreview = forwardRef(function CvPreview({ cv }, ref) {
               )}
             </div>
 
-            <div className="space-y-2 text-[9px] font-medium text-ink-soft">
+            <div className="flex-1 space-y-3 text-[9px] font-medium text-ink-soft">
               {age !== null && (
-                <p className="flex items-baseline">
-                  <span className="w-8 shrink-0 text-[8px] font-bold uppercase tracking-wider text-ink-subtle">Age</span>
-                  <span>{age} ans</span>
-                </p>
+                <div>
+                  <p className="text-[8px] font-bold uppercase tracking-wider text-ink-subtle">Âge</p>
+                  <p className="mt-0.5">{age} ans</p>
+                </div>
               )}
               {cv.profile.address && (
-                <p className="flex items-baseline">
-                  <span className="w-8 shrink-0 text-[8px] font-bold uppercase tracking-wider text-ink-subtle">Loc</span>
-                  <span className="min-w-0 break-words">{cv.profile.address}, Maroc</span>
-                </p>
+                <div>
+                  <p className="text-[8px] font-bold uppercase tracking-wider text-ink-subtle">Adresse</p>
+                  <p className="mt-0.5 min-w-0 break-anywhere">{cv.profile.address}, Maroc</p>
+                </div>
               )}
               {cv.profile.phone && (
-                <p className="flex items-baseline">
-                  <span className="w-8 shrink-0 text-[8px] font-bold uppercase tracking-wider text-ink-subtle">Num</span>
-                  <span className="min-w-0 break-words">{cv.profile.phone}</span>
-                </p>
+                <div>
+                  <p className="text-[8px] font-bold uppercase tracking-wider text-ink-subtle">Numéro</p>
+                  <p className="mt-0.5 min-w-0 break-anywhere">{cv.profile.phone}</p>
+                </div>
               )}
               {cv.profile.email && (
-                <p className="flex items-baseline">
-                  <span className="w-8 shrink-0 text-[8px] font-bold uppercase tracking-wider text-ink-subtle">Mail</span>
-                  <span className="min-w-0 break-all">{cv.profile.email}</span>
-                </p>
+                <div>
+                  <p className="text-[8px] font-bold uppercase tracking-wider text-ink-subtle">Email</p>
+                  <p className="mt-0.5 min-w-0 break-all">{cv.profile.email}</p>
+                </div>
+              )}
+              {cv.profile.summary && (
+                <div>
+                  <p className="text-[8px] font-bold uppercase tracking-wider text-ink-subtle">Profil</p>
+                  <p className="mt-0.5 text-[9px] leading-relaxed text-ink-soft break-anywhere">{cv.profile.summary}</p>
+                </div>
               )}
             </div>
-
-            {cv.profile.summary && (
-              <div className="mt-6 border-t border-ink/5 pt-4">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-brand-700">Profil</p>
-                <p className="mt-2 text-[9px] leading-relaxed text-ink-soft">{cv.profile.summary}</p>
-              </div>
-            )}
           </aside>
 
-          <div className="flex-1 min-w-0 flex flex-col gap-5 p-5 text-ink">
+          <div className="flex-1 min-w-0 flex flex-col gap-5 p-5 text-ink overflow-hidden">
             {cv.educations.length > 0 && (
               <section>
                 <p className="text-[9px] font-bold uppercase tracking-widest text-brand-700">Formation</p>
                 <div className="mt-3 space-y-3">
                   {cv.educations.map((e) => (
                     <article key={e.id}>
-                      <h4 className="text-[10px] font-bold text-ink">{e.title}</h4>
-                      <p className="mt-0.5 text-[8px] font-semibold tracking-wider text-ink-subtle uppercase">
-                        {e.start ? fmtDate(e.start) : ''}
-                        {e.is_current ? ' - Présent' : e.end ? ` - ${fmtDate(e.end)}` : ''}
-                        <span className="mx-1 opacity-30">|</span>
-                        {e.school}
-                      </p>
+                      <h4 className="text-[10px] font-bold text-ink break-anywhere">{e.title}</h4>
+                      <div className="mt-0.5 flex flex-wrap items-baseline gap-x-1 text-[8px] font-semibold tracking-wider text-ink-subtle uppercase min-w-0 break-anywhere">
+                        <span className="whitespace-nowrap">{e.start ? fmtDate(e.start) : ''}{e.is_current ? ' - Présent' : e.end ? ` - ${fmtDate(e.end)}` : ''}</span>
+                        {e.school && <><span className="opacity-30">|</span><span className="break-anywhere">{e.school}</span></>}
+                      </div>
                     </article>
                   ))}
                 </div>
@@ -938,14 +942,12 @@ export const CvPreview = forwardRef(function CvPreview({ cv }, ref) {
                 <div className="mt-3 space-y-3">
                   {experiences.map((e) => (
                     <article key={e.id}>
-                      <h4 className="text-[10px] font-bold text-ink">{e.role || e.position}</h4>
-                      <p className="mt-0.5 text-[8px] font-semibold tracking-wider text-ink-subtle uppercase">
-                        {e.start ? fmtDate(e.start) : ''}
-                        {e.is_current ? ' - Présent' : e.end ? ` - ${fmtDate(e.end)}` : ''}
-                        <span className="mx-1 opacity-30">|</span>
-                        {e.company}
-                      </p>
-                      {e.description && <p className="mt-1 text-[9px] leading-relaxed text-ink-soft whitespace-pre-line">{e.description}</p>}
+                      <h4 className="text-[10px] font-bold text-ink break-anywhere">{e.role || e.position}</h4>
+                      <div className="mt-0.5 flex flex-wrap items-baseline gap-x-1 text-[8px] font-semibold tracking-wider text-ink-subtle uppercase min-w-0 break-anywhere">
+                        <span className="whitespace-nowrap">{e.start ? fmtDate(e.start) : ''}{e.is_current ? ' - Présent' : e.end ? ` - ${fmtDate(e.end)}` : ''}</span>
+                        {e.company && <><span className="opacity-30">|</span><span className="break-anywhere">{e.company}</span></>}
+                      </div>
+                      {e.description && <p className="mt-1 text-[9px] leading-relaxed text-ink-soft whitespace-pre-line break-anywhere">{e.description}</p>}
                     </article>
                   ))}
                 </div>
@@ -957,7 +959,7 @@ export const CvPreview = forwardRef(function CvPreview({ cv }, ref) {
                 <section>
                   <p className="text-[9px] font-bold uppercase tracking-widest text-brand-700">Compétences</p>
                   <ul className="mt-2.5 space-y-1 text-[9px] text-ink-soft">
-                    {cv.skills.filter(Boolean).map((s) => <li key={s} className="flex items-center gap-2"><span className="shrink-0 text-brand-700/50">-</span>{s}</li>)}
+                    {cv.skills.filter(Boolean).map((s) => <li key={s} className="flex min-w-0 gap-1"><span className="shrink-0 text-brand-700/50">- </span><span className="min-w-0 break-anywhere">{s}</span></li>)}
                   </ul>
                 </section>
               )}
@@ -967,10 +969,9 @@ export const CvPreview = forwardRef(function CvPreview({ cv }, ref) {
                   <p className="text-[9px] font-bold uppercase tracking-widest text-brand-700">Langues</p>
                   <ul className="mt-2.5 space-y-1 text-[9px] text-ink-soft">
                     {cv.languages.map((l) => (
-                      <li key={l.id} className="flex items-center gap-1">
-                        <span className="shrink-0 text-brand-700/50">-</span>
-                        <span>{l.name}</span>
-                        {l.level && <span className="text-[8px] text-ink-subtle">({l.level})</span>}
+                      <li key={l.id} className="flex min-w-0 gap-1">
+                        <span className="shrink-0 text-brand-700/50">- </span>
+                        <span className="min-w-0 break-anywhere">{l.name}{l.level && <> <span className="text-[8px] text-ink-subtle">({l.level})</span></>}</span>
                       </li>
                     ))}
                   </ul>
@@ -982,10 +983,9 @@ export const CvPreview = forwardRef(function CvPreview({ cv }, ref) {
                   <p className="text-[9px] font-bold uppercase tracking-widest text-brand-700">Certifications</p>
                   <div className="mt-2.5 space-y-1">
                     {cv.certifications.filter((c) => c.name).map((c) => (
-                      <article key={c.id} className="text-[9px] text-ink-soft flex items-baseline gap-1">
-                        <span className="shrink-0 text-brand-700/50">-</span>
-                        <span className="font-medium text-ink">{c.name}</span>
-                        {c.year && <span className="text-[8px] text-ink-subtle">({c.year})</span>}
+                      <article key={c.id} className="text-[9px] text-ink-soft flex min-w-0 gap-1">
+                        <span className="shrink-0 text-brand-700/50">- </span>
+                        <span className="min-w-0 break-anywhere"><span className="font-medium text-ink">{c.name}</span>{c.year && <> <span className="text-[8px] text-ink-subtle">({c.year})</span></>}</span>
                       </article>
                     ))}
                   </div>
@@ -997,7 +997,7 @@ export const CvPreview = forwardRef(function CvPreview({ cv }, ref) {
                   <p className="text-[9px] font-bold uppercase tracking-widest text-brand-700">Loisirs</p>
                   <ul className="mt-2.5 space-y-1 text-[9px] text-ink-soft">
                     {loisirs.map((l) => (
-                      <li key={l.id} className="flex items-center gap-2"><span className="shrink-0 text-brand-700/50">-</span>{l.label || l.url}</li>
+                      <li key={l.id} className="flex min-w-0 gap-1"><span className="shrink-0 text-brand-700/50">- </span><span className="min-w-0 break-anywhere">{l.label || l.url}</span></li>
                     ))}
                   </ul>
                 </section>
@@ -1007,6 +1007,5 @@ export const CvPreview = forwardRef(function CvPreview({ cv }, ref) {
           </div>
         </div>
       </div>
-    </div>
   )
 })

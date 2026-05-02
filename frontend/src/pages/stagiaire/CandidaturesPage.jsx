@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -17,6 +17,7 @@ import { toast } from 'sonner'
 
 export default function CandidaturesPage() {
   const queryClient = useQueryClient()
+  const [cancellingId, setCancellingId] = useState(null)
 
   const { data: raw = [], isLoading } = useQuery({
     queryKey: ['applications', 'me'],
@@ -26,15 +27,17 @@ export default function CandidaturesPage() {
   const applications = useMemo(() => raw.map(normalizeApplication), [raw])
 
   const cancelMutation = useMutation({
-    mutationFn: cancelApplication,
+    mutationFn: (id) => {
+      setCancellingId(id)
+      return cancelApplication(id)
+    },
     onSuccess: () => {
       toast.success('Candidature annulée.')
       queryClient.invalidateQueries({ queryKey: ['applications', 'me'] })
     },
+    onSettled: () => setCancellingId(null),
     onError: () => toast.error("Impossible d'annuler cette candidature."),
   })
-
-  const list = applications
 
   function handleCancel(id, e) {
     e.preventDefault()
@@ -74,17 +77,17 @@ export default function CandidaturesPage() {
             <div className="max-w-xs">
               <p className="font-display text-lg font-medium text-ink">Aucune candidature</p>
               <p className="mt-1 text-sm text-ink-muted">
-                Vous n'avez pas encore postulé à des offres d'emploi.
+                Vous n'avez pas encore postulé à des offres.
               </p>
             </div>
           </div>
         )}
 
-        {list.map((a) => (
+        {applications.map((a) => (
           <Link
             key={a.id}
             to={`/offres/${a.offer_id}`}
-            className="card-raised group flex flex-col gap-4 p-5 transition-all hover:-translate-y-0.5 sm:flex-row sm:items-center sm:gap-6"
+            className="card-raised group flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:gap-6"
           >
             <div className="flex min-w-0 flex-1 items-center gap-4">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
@@ -99,24 +102,26 @@ export default function CandidaturesPage() {
             </div>
             <div className="flex flex-wrap items-center gap-4 text-xs text-ink-soft">
               <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{a.city}</span>
-              <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />Postulé le {new Date(a.applied_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}</span>
+              <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />Postulé le {new Date(a.applied_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
             </div>
             
             <div className="flex items-center gap-2">
               <button
                 onClick={(e) => handleCancel(a.id, e)}
-                disabled={cancelMutation.isPending}
+                disabled={cancellingId === a.id}
                 className="flex h-9 w-9 items-center justify-center rounded-full text-ink-subtle transition-colors hover:bg-red-50 hover:text-red-600"
                 title="Annuler la candidature"
               >
-                {cancelMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                {cancellingId === a.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
               </button>
-              <ArrowUpRight className="h-4 w-4 text-ink-subtle transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+              <span className="flex h-9 w-9 items-center justify-center rounded-full text-ink-subtle transition-colors hover:bg-brand-50 hover:text-brand-600">
+                <ArrowUpRight className="h-4 w-4" />
+              </span>
             </div>
           </Link>
         ))}
 
-        {!isLoading && applications.length > 0 && list.length === 0 && (
+        {!isLoading && applications.length > 0 && applications.length === 0 && (
           <div className="card p-8 text-center text-ink-muted">
             Aucune candidature pour cette recherche.
           </div>

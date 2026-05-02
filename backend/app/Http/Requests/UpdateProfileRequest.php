@@ -14,6 +14,7 @@ class UpdateProfileRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'email' => ['sometimes', 'string', 'email', 'max:255', 'unique:users,email,' . ($this->user()?->id ?? 'NULL')],
             'first_name' => ['sometimes', 'string', 'max:100'],
             'last_name' => ['sometimes', 'string', 'max:100'],
             'phone' => ['sometimes', 'nullable', 'string', 'max:20'],

@@ -11,6 +11,7 @@ class CvResource extends JsonResource
         return [
             'id' => $this->id,
             'summary' => $this->summary,
+            'headline' => $this->headline,
             'experiences' => $this->experiences ?? [],
             'educations' => $this->educations ?? [],
             'skills' => $this->skills ?? [],

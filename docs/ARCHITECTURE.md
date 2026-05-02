@@ -145,11 +145,8 @@ Accessor : `full_name` = `first_name` + `last_name` (computed via Eloquent acces
 | company_name    | VARCHAR(150)      | NOT NULL                            |
 | type            | VARCHAR(20)       | NOT NULL, default `emploi` (cast OfferType enum: `emploi`/`stage`) |
 | description     | TEXT              | NOT NULL                            |
-| requirements    | TEXT              | NULLABLE                            |
+| requirements    | TEXT              | NULLABLE (filière cible, ex: « Développement Digital option Web Full Stack ») |
 | location        | VARCHAR(150)      | NULLABLE                            |
-| contract_type   | VARCHAR(80)       | NULLABLE (CDI, CDD, PFE, …)         |
-| duration        | VARCHAR(80)       | NULLABLE                            |
-| salary_range    | VARCHAR(80)       | NULLABLE                            |
 | is_published    | BOOLEAN           | NOT NULL, default true              |
 | published_at    | TIMESTAMP         | NULLABLE                            |
 | closes_at       | DATE              | NULLABLE                            |
@@ -163,6 +160,7 @@ Index : `(is_published, published_at)`, `(type)`.
 |------------------|-------------------|-------------------------------------|
 | id               | BIGINT UNSIGNED   | PK                                  |
 | user_id          | BIGINT UNSIGNED   | FK users.id UNIQUE, ON DELETE CASCADE |
+| headline         | VARCHAR(200)      | NULLABLE (titre professionnel)      |
 | summary          | TEXT              | NULLABLE (résumé / objectif)        |
 | experiences      | JSON              | NULLABLE (`[{position, company, start_date, end_date, is_current, description}]`) |
 | educations       | JSON              | NULLABLE (`[{degree, school, start_date, end_date}]`) |
@@ -467,8 +465,7 @@ Titre de l'offre                        [Badge type]
 Société · Lieu · Date de publication
 
 Description complète…
-Exigences…
-Durée / Contrat / Salaire
+Filière cible
 
 [ Postuler ]   ← si non connecté : redirection login
                ← si connecté mais profil incomplet : tooltip

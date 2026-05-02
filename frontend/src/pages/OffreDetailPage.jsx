@@ -1,31 +1,32 @@
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft,
   MapPin,
   Calendar,
-  Clock,
   Building2,
   GraduationCap,
   Briefcase,
   CheckCircle2,
-  Share2,
-  Bookmark,
-  Users,
   FileX,
   Loader2,
 } from 'lucide-react'
 import { getPublicOffer } from '@/api/offers'
-import { applyToOffer } from '@/api/applications'
+import { applyToOffer, listMyApplications } from '@/api/applications'
+import { getMyProfile } from '@/api/profile'
+import { getMyCv } from '@/api/cv'
 import { normalizeOffer } from '@/lib/normalizers'
 import Badge from '@/components/ui/Badge'
 import { useAuthStore } from '@/stores/authStore'
 import { toast } from 'sonner'
 
+const DASH = '—'
+
 export default function OffreDetailPage() {
   const { id } = useParams()
   const { user, token } = useAuthStore()
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['offers', 'public', id],
@@ -35,6 +36,45 @@ export default function OffreDetailPage() {
   })
   const offer = data ? normalizeOffer(data) : null
 
+  const isStagiaire = !!(token && user?.role === 'stagiaire')
+
+  const { data: myApps = [] } = useQuery({
+    queryKey: ['applications', 'me'],
+    queryFn: listMyApplications,
+    enabled: isStagiaire,
+  })
+  const alreadyApplied = myApps.some((a) => a.offer?.id === Number(id))
+
+  const { data: profileData } = useQuery({
+    queryKey: ['me', 'profile'],
+    queryFn: getMyProfile,
+    enabled: isStagiaire,
+    staleTime: 0,
+  })
+  const myProfile = profileData?.profile
+  const myUser = profileData?.user
+  const missingProfile = []
+  if (isStagiaire && myUser && myProfile) {
+    if (!myUser.first_name?.trim()) missingProfile.push('Prénom')
+    if (!myUser.last_name?.trim()) missingProfile.push('Nom')
+    if (!myUser.email?.trim()) missingProfile.push('Email')
+    if (!myUser.phone?.trim()) missingProfile.push('Téléphone')
+    if (!myProfile.filiere?.trim()) missingProfile.push('Filière')
+    if (!myProfile.promotion) missingProfile.push('Promotion')
+    if (!myProfile.bio?.trim()) missingProfile.push('Profil')
+    if (!myProfile.photo_path) missingProfile.push('Photo')
+  }
+  const profileCompleted = missingProfile.length === 0
+  const myFiliere = myProfile?.filiere || ''
+
+  const { data: cvData } = useQuery({
+    queryKey: ['me', 'cv'],
+    queryFn: getMyCv,
+    enabled: isStagiaire,
+    staleTime: 0,
+  })
+  const cvFinalized = !!cvData?.is_finalized
+
   const applyMutation = useMutation({
     mutationFn: () => applyToOffer(id),
     onSuccess: () => {
@@ -42,9 +82,12 @@ export default function OffreDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['applications'] })
     },
     onError: (error) => {
+      const errs = error?.response?.data?.errors
       const msg =
-        error?.response?.data?.errors?.profile?.[0] ||
-        error?.response?.data?.errors?.offer?.[0] ||
+        errs?.profile?.[0] ||
+        errs?.cv?.[0] ||
+        errs?.filiere?.[0] ||
+        errs?.offer?.[0] ||
         error?.response?.data?.message ||
         'Impossible d\'envoyer la candidature.'
       toast.error(msg)
@@ -82,24 +125,38 @@ export default function OffreDetailPage() {
     )
   }
 
-  const isStagiaire = token && user?.role === 'stagiaire'
   const typeIcon = offer.type === 'stage' ? GraduationCap : Briefcase
 
   function handleApply() {
     if (!token) {
-      toast.error('Connectez-vous pour postuler.')
+      navigate('/inscription')
       return
     }
     if (user.role !== 'stagiaire') {
       toast.error('Les candidatures sont réservées aux stagiaires.')
       return
     }
+    if (!profileCompleted) {
+      navigate('/espace/profil')
+      return
+    }
+    if (!cvFinalized) {
+      navigate('/espace/cv')
+      return
+    }
+    // Check filiere match client-side for instant feedback
+    if (offer.filiere && myFiliere && offer.filiere !== DASH) {
+      if (offer.filiere.toLowerCase().trim() !== myFiliere.toLowerCase().trim()) {
+        toast.error('Cette offre ne correspond pas à votre filière.')
+        return
+      }
+    }
     applyMutation.mutate()
   }
 
   return (
     <div className="relative">
-      <div className="mx-auto max-w-5xl px-6 py-12 lg:py-16">
+      <div className="mx-auto max-w-5xl px-6 py-10">
         <Link
           to="/offres"
           className="inline-flex items-center gap-1 text-sm text-ink-muted transition-colors hover:text-ink"
@@ -108,17 +165,14 @@ export default function OffreDetailPage() {
           Toutes les offres
         </Link>
 
-        <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_320px]">
-          <article>
+        <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <article className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <Badge tone={offer.type === 'stage' ? 'accent' : 'brand'} icon={typeIcon}>
                 {offer.type === 'stage' ? 'Stage' : 'Emploi'}
               </Badge>
               <Badge tone="outline" icon={MapPin}>
-                {offer.city} · {offer.remote}
-              </Badge>
-              <Badge tone="outline" icon={Clock}>
-                {offer.duration}
+                {offer.city}
               </Badge>
             </div>
 
@@ -126,50 +180,16 @@ export default function OffreDetailPage() {
               {offer.title}
             </h1>
             <p className="mt-3 text-lg text-ink-muted">
-              {offer.company} — {offer.filiere}
+              {offer.company}
             </p>
 
             <section className="mt-10">
-              <h2 className="display text-display-md text-ink">Le poste</h2>
-              <p className="mt-3 leading-relaxed text-ink-soft">
+              <h2 className="display text-display-md text-ink">Description</h2>
+              <p className="mt-3 leading-relaxed text-ink-soft whitespace-pre-line break-words">
                 {offer.description}
               </p>
             </section>
 
-            <section className="mt-10">
-              <h2 className="display text-display-md text-ink">Missions</h2>
-              <ul className="mt-4 space-y-3">
-                {offer.missions.map((m) => (
-                  <li key={m} className="flex items-start gap-3">
-                    <span className="mt-1.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                    </span>
-                    <span className="text-ink-soft">{m}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-
-            <section className="mt-10">
-              <h2 className="display text-display-md text-ink">Compétences recherchées</h2>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {offer.skills.map((s) => (
-                  <span
-                    key={s}
-                    className="rounded-full border border-ink/10 bg-paper-card px-3 py-1 text-sm font-medium text-ink-soft"
-                  >
-                    {s}
-                  </span>
-                ))}
-              </div>
-            </section>
-
-            <section className="mt-10 card p-6">
-              <h2 className="display text-display-md text-ink">À propos de {offer.company}</h2>
-              <p className="mt-3 text-sm leading-relaxed text-ink-muted">
-                Partenaire de longue date de l'ISTA Khemisset, {offer.company} recrute régulièrement des stagiaires et jeunes diplômés issus de nos filières. Les précédentes candidatures issues de la plateforme ont un taux d'acceptation de 42 %.
-              </p>
-            </section>
           </article>
 
           <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
@@ -177,48 +197,30 @@ export default function OffreDetailPage() {
               <p className="kicker">Récapitulatif</p>
               <dl className="mt-5 space-y-3 text-sm">
                 <Row Icon={Building2} label="Entreprise" value={offer.company} />
-                <Row Icon={MapPin} label="Lieu" value={`${offer.city} · ${offer.remote}`} />
-                <Row Icon={Clock} label="Durée" value={offer.duration} />
-                <Row Icon={Calendar} label="Clôture" value={offer.deadline ? new Date(offer.deadline).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }) : 'Non définie'} />
-                <Row Icon={Users} label="Candidats" value={`${offer.applicants} en lice`} />
+                <Row Icon={MapPin} label="Lieu" value={offer.city} />
+                <Row Icon={GraduationCap} label="Filière" value={offer.filiere} />
+                <Row Icon={Calendar} label="Clôture" value={offer.deadline ? new Date(offer.deadline).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'Non définie'} />
               </dl>
-              <div className="mt-5 flex items-center justify-between rounded-2xl bg-paper-tint px-4 py-3">
-                <span className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-subtle">Rémunération</span>
-                <span className="font-display text-xl font-medium text-ink">{offer.salary}</span>
-              </div>
-
               <button
                 onClick={handleApply}
                 className="btn-primary mt-5 w-full"
-                disabled={!isStagiaire || applyMutation.isPending}
+                disabled={applyMutation.isPending || alreadyApplied}
               >
                 {applyMutation.isPending
                   ? 'Envoi…'
-                  : isStagiaire
-                    ? 'Postuler maintenant'
-                    : token
-                      ? 'Réservé aux stagiaires'
-                      : 'Connectez-vous pour postuler'}
+                  : alreadyApplied
+                    ? <span className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4" /> Déjà postulé</span>
+                    : isStagiaire
+                      ? !profileCompleted
+                        ? 'Compléter profil'
+                        : !cvFinalized
+                          ? 'Finaliser CV'
+                          : 'Postuler maintenant'
+                      : token
+                        ? 'Réservé aux stagiaires'
+                        : 'Créer un compte pour postuler'}
               </button>
-              {!token && (
-                <p className="mt-3 text-center text-xs text-ink-subtle">
-                  Pas encore inscrit ?{' '}
-                  <Link to="/inscription" className="font-semibold text-brand-700 underline-offset-4 hover:underline">
-                    Créer un compte
-                  </Link>
-                </p>
-              )}
 
-              <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                <button className="btn-ghost justify-center border border-ink/10">
-                  <Bookmark className="h-4 w-4" />
-                  Sauver
-                </button>
-                <button className="btn-ghost justify-center border border-ink/10">
-                  <Share2 className="h-4 w-4" />
-                  Partager
-                </button>
-              </div>
             </div>
           </aside>
         </div>

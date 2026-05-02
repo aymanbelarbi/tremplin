@@ -124,6 +124,10 @@
 }
 
 @layer utilities {
+  .break-anywhere {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
   .bg-dotted {
     background-image: radial-gradient(rgba(12, 20, 15, 0.08) 1px, transparent 1px);
     background-size: 16px 16px;

@@ -30,6 +30,9 @@ class OfferController extends Controller
         if ($city = $request->string('city')->toString()) {
             $q->where('location', 'like', "%{$city}%");
         }
+        if ($filiere = $request->string('filiere')->toString()) {
+            $q->where('requirements', 'like', "%{$filiere}%");
+        }
 
         return response()->json([
             'data' => OfferResource::collection($q->get()),

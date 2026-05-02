@@ -27,9 +27,6 @@ class StoreOfferRequest extends FormRequest
             'description' => ['required', 'string', 'max:5000'],
             'requirements' => ['nullable', 'string', 'max:3000'],
             'location' => ['nullable', 'string', 'max:150'],
-            'contract_type' => ['nullable', 'string', 'max:80'],
-            'duration' => ['nullable', 'string', 'max:80'],
-            'salary_range' => ['nullable', 'string', 'max:80'],
             'is_published' => ['boolean'],
             'closes_at' => $closesAtRules,
         ];

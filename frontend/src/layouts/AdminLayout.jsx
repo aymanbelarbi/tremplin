@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from 'react'
 import { Outlet, NavLink, Link, useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -7,6 +8,8 @@ import {
   ClipboardList,
   Shield,
   BookOpen,
+  Menu,
+  X,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { logout as apiLogout } from '@/api/auth'
@@ -15,11 +18,12 @@ import Logo from '@/components/brand/Logo'
 import { cn } from '@/lib/cn'
 import PageTransition from '@/components/ui/PageTransition'
 import { AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 
 const links = [
   { to: '/admin/dashboard', label: 'Tableau de bord', Icon: LayoutDashboard },
-  { to: '/admin/offres', label: 'Offres', Icon: Briefcase },
   { to: '/admin/stagiaires', label: 'Stagiaires', Icon: Users },
+  { to: '/admin/offres', label: 'Offres', Icon: Briefcase },
   { to: '/admin/candidatures', label: 'Candidatures', Icon: ClipboardList },
   { to: '/admin/filieres', label: 'Filières', Icon: BookOpen },
 ]
@@ -28,6 +32,16 @@ export default function AdminLayout() {
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const drawerRef = useRef(false)
+
+  // Close drawer on route change
+  useEffect(() => {
+    if (drawerRef.current) {
+      setDrawerOpen(false)
+      drawerRef.current = false
+    }
+  }, [location.pathname])
 
   async function handleLogout() {
     try {
@@ -40,6 +54,80 @@ export default function AdminLayout() {
     navigate('/', { replace: true })
   }
 
+  const sidebarContent = (
+    <>
+      <Link to="/admin/dashboard" className="flex items-center">
+        <Logo />
+      </Link>
+
+      <span className="chip mt-5 w-fit border-brand-200 bg-brand-50 text-brand-700">
+        <Shield className="h-3 w-3" /> Console administration
+      </span>
+
+      <nav className="mt-8 space-y-1">
+        {links.map(({ to, label, Icon }) => (
+          <NavLink
+            key={to}
+            to={to}
+            className={({ isActive }) =>
+              cn(
+                'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
+                isActive
+                  ? 'bg-ink text-paper'
+                  : 'text-ink-soft hover:bg-ink/5',
+              )
+            }
+          >
+            {({ isActive }) => (
+              <>
+                <span
+                  className={cn(
+                    'flex h-7 w-7 items-center justify-center rounded-lg transition-colors',
+                    isActive
+                      ? 'bg-accent-400 text-ink'
+                      : 'bg-ink/5 text-ink-soft group-hover:bg-ink/10',
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                </span>
+                <span>{label}</span>
+              </>
+            )}
+          </NavLink>
+        ))}
+      </nav>
+
+      <div className="mt-auto">
+        <div className="card-ink p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-400 font-semibold text-ink">
+              {user?.full_name
+                ?.split(' ')
+                .map((p) => p[0])
+                .slice(0, 2)
+                .join('') || 'AD'}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-paper">
+                {user?.full_name || 'Administrateur'}
+              </p>
+              <p className="truncate text-[11px] text-paper/60">
+                {user?.email}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-paper/10 px-3 py-2 text-xs font-semibold text-paper transition-colors hover:bg-paper/20"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            Déconnexion
+          </button>
+        </div>
+      </div>
+    </>
+  )
+
   return (
     <div className="relative flex min-h-screen bg-paper text-ink">
       <div
@@ -47,80 +135,52 @@ export default function AdminLayout() {
         className="pointer-events-none fixed inset-0 bg-noise opacity-60 mix-blend-multiply"
       />
 
-      <aside className="fixed left-0 top-0 hidden h-screen w-72 shrink-0 flex-col border-r border-ink/10 bg-paper-card/70 p-6 backdrop-blur md:flex overflow-y-auto">
-        <Link to="/admin/dashboard" className="flex items-center">
-          <Logo />
-        </Link>
-
-        <span className="chip mt-5 w-fit border-brand-200 bg-brand-50 text-brand-700">
-          <Shield className="h-3 w-3" /> Console administration
-        </span>
-
-        <nav className="mt-8 space-y-1">
-          {links.map(({ to, label, Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                cn(
-                  'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
-                  isActive
-                    ? 'bg-ink text-paper'
-                    : 'text-ink-soft hover:bg-ink/5',
-                )
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <span
-                    className={cn(
-                      'flex h-7 w-7 items-center justify-center rounded-lg transition-colors',
-                      isActive
-                        ? 'bg-accent-400 text-ink'
-                        : 'bg-ink/5 text-ink-soft group-hover:bg-ink/10',
-                    )}
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                  </span>
-                  <span>{label}</span>
-                </>
-              )}
-            </NavLink>
-          ))}
-        </nav>
-
-        <div className="mt-auto">
-          <div className="card-ink p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-400 font-semibold text-ink">
-                {user?.full_name
-                  ?.split(' ')
-                  .map((p) => p[0])
-                  .slice(0, 2)
-                  .join('') || 'AD'}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-paper">
-                  {user?.full_name || 'Administrateur'}
-                </p>
-                <p className="truncate text-[11px] text-paper/60">
-                  {user?.email}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-paper/10 px-3 py-2 text-xs font-semibold text-paper transition-colors hover:bg-paper/20"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              Déconnexion
-            </button>
-          </div>
-        </div>
+      {/* Desktop sidebar */}
+      <aside className="fixed left-0 top-0 hidden h-screen w-72 shrink-0 flex-col border-r border-ink/10 bg-white p-6 md:flex overflow-y-auto">
+        {sidebarContent}
       </aside>
 
-      <main className="relative w-full flex-1 overflow-x-hidden px-6 py-10 md:ml-72 md:px-10">
-        <div className="mx-auto w-full max-w-5xl">
+      {/* Mobile: top bar with burger */}
+      <div className="fixed top-0 right-0 z-50 flex items-center gap-2 p-4 md:hidden">
+        <button
+          onClick={() => { setDrawerOpen(!drawerOpen); drawerRef.current = !drawerOpen }}
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-paper-card/80 border border-ink/10 backdrop-blur-xl shadow-soft text-ink transition-colors hover:bg-ink/5"
+        >
+          {drawerOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
+      </div>
+
+      {/* Mobile: overlay backdrop */}
+      <AnimatePresence>
+        {drawerOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-40 bg-ink/30 backdrop-blur-sm md:hidden"
+            onClick={() => { setDrawerOpen(false); drawerRef.current = false }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Mobile: slide-in drawer from left */}
+      <AnimatePresence>
+        {drawerOpen && (
+          <motion.aside
+            initial={{ x: '-100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '-100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="fixed left-0 top-0 z-50 flex h-screen w-72 flex-col border-r border-ink/10 bg-white p-6 overflow-y-auto md:hidden"
+          >
+            {sidebarContent}
+          </motion.aside>
+        )}
+      </AnimatePresence>
+
+      <main className="relative w-full flex-1 overflow-x-hidden px-4 pt-16 pb-10 md:ml-72 md:px-10 md:pt-10">
+        <div className="mx-auto w-full max-w-7xl">
           <AnimatePresence mode="wait">
             <PageTransition key={location.pathname}>
               <Outlet />

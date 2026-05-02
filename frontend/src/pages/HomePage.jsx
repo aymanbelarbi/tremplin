@@ -37,12 +37,12 @@ function Hero() {
             <h1 className="display mt-6 text-display-xl text-ink">
               Votre profil,<br className="hidden sm:block" />{' '}
               <span className="display-italic text-brand-600">votre tremplin</span>{' '}
-              vers l'emploi.
+              vers l'emploi et le stage.
             </h1>
 
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-muted">
               Créez votre profil, construisez votre CV, et postulez aux offres
-              d'emploi de l'ISTA Khemisset.
+              d'emploi et de stage de l'ISTA Khemisset.
             </p>
 
             <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -72,7 +72,7 @@ function Stats() {
     <section className="relative border-y border-ink/10 bg-white">
       <div className="mx-auto grid max-w-6xl grid-cols-2 gap-px overflow-hidden rounded-none bg-ink/10 md:grid-cols-4">
         <Stat value="CV" label="Moderne" hint="Construisez et téléchargez en un clic" />
-        <Stat value="Offres" label="Exclusives" hint="Offres d'emploi de l'ISTA" />
+        <Stat value="Offres" label="Exclusives" hint="Offres d'emploi et de stage de l'ISTA" />
         <Stat value="Emploi" label="Suivi" hint="Employé ou en recherche" />
         <Stat value="Candidature" label="Simplifiée" hint="Postulez avec votre CV" />
       </div>
@@ -114,7 +114,7 @@ function Features() {
               </p>
               <ul className="mt-6 space-y-2 text-sm text-ink-soft">
                 <Bullet>Création de CV avec aperçu en direct</Bullet>
-                <Bullet>Indiquez si vous avez trouvé un emploi</Bullet>
+                <Bullet>Indiquez si vous avez trouvé un emploi ou un stage</Bullet>
                 <Bullet>Historique clair de vos candidatures envoyées</Bullet>
               </ul>
             </div>
@@ -133,9 +133,9 @@ function Features() {
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-ink text-paper">
             <Briefcase className="h-5 w-5" />
           </div>
-          <h3 className="mt-5 text-xl font-semibold text-ink">Offres d'emploi</h3>
+          <h3 className="mt-5 text-xl font-semibold text-ink">Offres d'emploi & stage</h3>
           <p className="mt-2 text-sm text-ink-muted">
-            Offres d'emploi publiées par l'administration, filtrées par filière
+            Offres d'emploi et de stage publiées par l'administration, filtrées par filière
             et type de contrat.
           </p>
         </div>
@@ -144,9 +144,9 @@ function Features() {
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent-400 text-ink">
             <Search className="h-5 w-5" />
           </div>
-          <h3 className="mt-5 text-xl font-semibold text-paper">Suivi d'emploi</h3>
+          <h3 className="mt-5 text-xl font-semibold text-paper">Suivi d'insertion</h3>
           <p className="mt-2 text-sm text-paper/70">
-            Indiquez votre situation professionnelle — employé ou en recherche —
+            Indiquez votre situation — employé, en stage ou en recherche —
             et partagez les détails de votre poste.
           </p>
         </div>
@@ -215,7 +215,7 @@ function HowItWorks() {
               n="01"
               icon={Briefcase}
               title="Inscrivez-vous et indiquez votre situation"
-              text="Employé ou en recherche ? Partagez les détails de votre poste si vous avez trouvé un emploi."
+              text="Employé, en stage ou en recherche ? Partagez les détails de votre poste si vous avez trouvé une opportunité."
             />
             <Step
               n="02"
@@ -296,7 +296,7 @@ function CtaBand() {
       </div>
 
       <p className="sr-only">
-        Le tremplin vers votre carrière.
+        Le tremplin vers votre avenir professionnel.
       </p>
     </section>
   )

@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import { LogOut, ArrowUpRight, Menu, X, Home, Briefcase, LayoutDashboard, User } from 'lucide-react'
 import { logout as apiLogout } from '@/api/auth'
@@ -13,6 +13,14 @@ export default function PublicNavbar() {
   const [scrolled, setScrolled] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
   const location = useLocation()
+  const prevPathname = useRef(location.pathname)
+
+  useEffect(() => {
+    if (location.pathname !== prevPathname.current) {
+      prevPathname.current = location.pathname
+      setIsOpen(false)
+    }
+  }, [location.pathname])
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12)
@@ -20,10 +28,6 @@ export default function PublicNavbar() {
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
-
-  useEffect(() => {
-    setIsOpen(false)
-  }, [location.pathname])
 
   async function handleLogout() {
     try {
@@ -58,49 +62,59 @@ export default function PublicNavbar() {
           <Logo />
         </Link>
 
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-6">
+        {/* Desktop Navigation — same pill style as mobile */}
+        <nav className="hidden md:flex items-center gap-1">
           {navLinks.map(({ to, label, Icon }) => (
             <Link
               key={to}
               to={to}
               className={cn(
-                'flex items-center gap-2 text-sm font-semibold transition-colors hover:text-brand-600',
+                'flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold transition-colors',
                 (to === '/' ? location.pathname === '/' : location.pathname.startsWith(to))
-                  ? 'text-brand-600'
-                  : 'text-ink-soft'
+                  ? 'bg-brand-50 text-brand-700'
+                  : 'text-ink-soft hover:bg-ink/5'
               )}
             >
               <Icon className="h-4 w-4" />
               {label}
             </Link>
           ))}
-        </nav>
 
-        <div className="flex items-center gap-2">
-          {token && user ? (
-            <div className="flex items-center gap-2">
-              <button onClick={handleLogout} className="btn-ghost px-3 group">
-                <LogOut className="h-4 w-4 text-ink-soft transition-colors group-hover:text-red-500" />
-                <span className="hidden sm:inline">Déconnexion</span>
-              </button>
-            </div>
-          ) : (
-            <div className="hidden sm:flex items-center gap-2">
+          {token && user?.role === 'stagiaire' && (
+            <button onClick={handleLogout} className="flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 ml-1">
+              <LogOut className="h-4 w-4" />
+              Déconnexion
+            </button>
+          )}
+          {token && user && user.role !== 'stagiaire' && (
+            <Link to="/admin" className={cn(
+              'flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold transition-colors ml-1',
+              location.pathname.startsWith('/admin')
+                ? 'bg-brand-50 text-brand-700'
+                : 'text-ink-soft hover:bg-ink/5'
+            )}>
+              <LayoutDashboard className="h-4 w-4" />
+              Admin
+            </Link>
+          )}
+          {!token && (
+            <div className="flex items-center gap-2 ml-2">
               <Link to="/connexion" className="btn-ghost px-4">
-                <span>Connexion</span>
+                Connexion
               </Link>
               <Link to="/inscription" className="btn-primary group">
-                <span>Inscription</span>
+                Inscription
                 <ArrowUpRight className="h-4 w-4" />
               </Link>
             </div>
           )}
+        </nav>
 
+        <div className="flex items-center gap-2 md:hidden">
           {/* Mobile Menu Toggle */}
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="relative flex h-10 w-10 items-center justify-center rounded-full bg-ink/5 text-ink md:hidden overflow-hidden"
+            className="relative flex h-10 w-10 items-center justify-center rounded-full bg-ink/5 text-ink overflow-hidden"
           >
             <motion.div
               animate={{ rotate: isOpen ? 90 : 0 }}
@@ -128,7 +142,7 @@ export default function PublicNavbar() {
                   key={to}
                   to={to}
                   className={cn(
-                    'flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition-colors',
+                    'flex items-center gap-3 rounded-full px-4 py-3 text-sm font-semibold transition-colors',
                     (to === '/' ? location.pathname === '/' : location.pathname.startsWith(to))
                       ? 'bg-brand-50 text-brand-700'
                       : 'text-ink-soft hover:bg-ink/5'
@@ -139,15 +153,25 @@ export default function PublicNavbar() {
                 </Link>
               ))}
 
-              {token ? (
+              {token && user?.role === 'stagiaire' ? (
                 <div className="mt-4 border-t border-ink/5 pt-4">
                   <button
                     onClick={handleLogout}
-                    className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50"
+                    className="flex w-full items-center gap-3 rounded-full px-4 py-3 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50"
                   >
                     <LogOut className="h-5 w-5" />
                     Déconnexion
                   </button>
+                </div>
+              ) : token && user ? (
+                <div className="mt-4 border-t border-ink/5 pt-4">
+                  <Link
+                    to="/admin"
+                    className="flex w-full items-center gap-3 rounded-full px-4 py-3 text-sm font-semibold text-brand-600 transition-colors hover:bg-brand-50"
+                  >
+                    <LayoutDashboard className="h-5 w-5" />
+                    Admin
+                  </Link>
                 </div>
               ) : (
                 <div className="mt-4 grid grid-cols-2 gap-3 border-t border-ink/5 pt-4">

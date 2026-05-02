@@ -1,57 +1,40 @@
 /**
- * Maps filière group names to suggested job titles for the Moroccan market.
- * Used to auto-suggest a "Titre / accroche" in the CV builder.
+ * Given a filiere name and its category (niveau), return the official job title.
+ * e.g. ("Développement Digital option Web Full Stack", "Technicien Spécialisé")
+ *   → "Technicien Spécialisé en Développement Digital option Web Full Stack"
  */
-export const JOB_TITLES = {
-  'Développement Digital': [
-    'Développeur Web',
-    'Développeur Mobile',
-    'Développeur Full Stack',
-    'Data Analyst',
-  ],
-
-  'Gestion des Entreprises': [
-    'Gestionnaire Comptable',
-    'Assistant de Gestion',
-    'Responsable Administratif',
-    'Chargé de Clientèle',
-  ],
-  'Assistant Administratif': [
-    'Assistant de Direction',
-    'Secrétaire Comptable',
-    'Agent Administratif',
-    "Chargé d'Accueil",
-  ],
-  'Electromécanique des Systèmes Automatisées': [
-    'Technicien de Maintenance',
-    'Électromécanicien',
-    'Technicien en Automatismes',
-  ],
-  'Génie électrique': [
-    'Technicien Électricien',
-    'Responsable Électrique',
-    "Chargé d'Affaires Électricité",
-  ],
-  'Arts culinaires': [
-    'Cuisinier',
-    'Chef de Partie',
-    'Commis de Cuisine',
-  ],
-  'Electricité d\'Entretien Industriel': [
-    'Électricien Industriel',
-    'Technicien de Maintenance Électrique',
-  ],
+export function getOfficialTitle(name, category) {
+  if (!name || !category) return ''
+  if (category === 'Technicien Spécialisé') {
+    return `Technicien Spécialisé en ${name}`
+  }
+  if (category === 'Technicien') {
+    return `Technicien en ${name}`
+  }
+  if (category === 'Qualifié') {
+    return `Qualifié en ${name}`
+  }
+  return `${category} ${name}`
 }
 
 /**
- * Given a filière value like "Technicien Spécialisé — Développement Digital option Web Full Stack",
- * return suggested titles based on the main branch.
+ * Given a filiere value like "Développement Digital option Web Full Stack",
+ * return suggested titles based on the filiere branch.
+ * Uses the filiereGroups from useFilieres hook to find the category.
  */
-export function getJobTitlesForFiliere(filiere) {
-  if (!filiere) return []
-  
-  // Find which branch key is contained in the filiere string
-  const branchKey = Object.keys(JOB_TITLES).find(key => filiere.includes(key))
-  
-  return branchKey ? JOB_TITLES[branchKey] : []
+export function getSuggestedTitles(filiere, filiereGroups) {
+  if (!filiere || !filiereGroups) return []
+  // Find the category for this filiere
+  const group = filiereGroups.find((g) => g.options.includes(filiere))
+  if (!group) return []
+  const category = group.parent
+  const official = getOfficialTitle(filiere, category)
+  // Return the official title + related shorter titles
+  const titles = [official]
+  // Add the base filiere without "option ..." as a shorter alternative
+  const baseName = filiere.split(' option ')[0]
+  if (baseName !== filiere) {
+    titles.push(getOfficialTitle(baseName, category))
+  }
+  return titles.filter(Boolean)
 }

@@ -16,13 +16,10 @@ class OfferResource extends JsonResource
             'description' => $this->description,
             'requirements' => $this->requirements,
             'location' => $this->location,
-            'contract_type' => $this->contract_type,
-            'duration' => $this->duration,
-            'salary_range' => $this->salary_range,
             'is_published' => (bool) $this->is_published,
             'published_at' => $this->published_at,
-            'closes_at' => $this->closes_at,
-            'applications_count' => $this->whenCounted('applications'),
+            'closes_at' => $this->closes_at?->format('Y-m-d'),
+            'applications_count' => $this->applications_count ?? 0,
             'created_at' => $this->created_at,
         ];
     }

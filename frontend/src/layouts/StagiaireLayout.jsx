@@ -21,7 +21,7 @@ export default function StagiaireLayout() {
         className="pointer-events-none fixed inset-0 bg-noise opacity-60 mix-blend-multiply"
       />
       <PublicNavbar />
-      <div className="relative mx-auto grid w-full max-w-6xl flex-1 gap-8 px-6 py-10 md:grid-cols-[260px_1fr]">
+      <div className="relative mx-auto grid w-full max-w-6xl flex-1 gap-8 px-6 pt-16 pb-10 md:grid-cols-[260px_1fr]">
         <aside className="md:sticky md:top-24 md:self-start">
           <div className="card p-3">
             <div className="px-3 pb-3 pt-2">

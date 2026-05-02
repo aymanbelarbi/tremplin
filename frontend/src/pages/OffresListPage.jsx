@@ -9,6 +9,7 @@ import {
   Filter,
   Clock,
   Loader2,
+  GraduationCap,
 } from 'lucide-react'
 import { useFilieres } from '@/hooks/useFilieres'
 import { listPublicOffers } from '@/api/offers'
@@ -21,30 +22,24 @@ export default function OffresListPage() {
   const { filiereGroups, isLoading: loadingFilieres } = useFilieres()
 
   const { data: raw = [], isLoading } = useQuery({
-    queryKey: ['offers', 'public', { query }],
+    queryKey: ['offers', 'public', { query, filiere }],
     queryFn: () =>
       listPublicOffers({
         search: query || undefined,
+        filiere: filiere !== 'all' ? filiere : undefined,
       }),
   })
 
-  const offers = useMemo(() => raw.map(normalizeOffer), [raw])
-  const filtered = useMemo(() => {
-    let res = offers
-    if (filiere !== 'all') {
-      res = res.filter((o) => o.filiere === filiere || o.skills.includes(filiere))
-    }
-    return res
-  }, [offers, filiere])
+  const filtered = useMemo(() => raw.map(normalizeOffer), [raw])
 
   return (
     <div className="relative">
-      <div className="mx-auto max-w-6xl px-6 py-12 lg:py-20">
+      <div className="mx-auto max-w-6xl px-6 py-10">
         <header className="flex flex-col gap-8">
           <div>
             <span className="kicker">Opportunités</span>
             <h1 className="display mt-4 text-4xl lg:text-6xl text-ink leading-[1.1]">
-              Propulsez votre <span className="display-italic text-brand-600">carrière</span>
+              Propulsez votre <span className="display-italic text-brand-600">avenir professionnel</span>
               <br />vers de nouveaux horizons
             </h1>
             <p className="mt-6 max-w-2xl text-lg text-ink-soft leading-relaxed">
@@ -125,43 +120,40 @@ function OfferCard({ offer }) {
   return (
     <Link
       to={`/offres/${offer.id}`}
-      className="card-raised group flex flex-col p-8 transition-all hover:-translate-y-1 hover:border-brand-200"
+      className="card-raised group flex flex-col p-8"
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-brand-700">
-          <Briefcase className="h-3 w-3" />
-          Emploi
+          {offer.type === 'stage' ? <GraduationCap className="h-3 w-3" /> : <Briefcase className="h-3 w-3" />}
+          {offer.type === 'stage' ? 'Stage' : 'Emploi'}
         </div>
         <span className="inline-flex items-center gap-1 text-[11px] font-medium text-ink-subtle">
           <Clock className="h-3 w-3" />
-          {offer.deadline ? `Expire le ${new Date(offer.deadline).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}` : 'Postulez dès maintenant'}
+          {offer.deadline ? `Expire le ${new Date(offer.deadline).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}` : 'Postulez dès maintenant'}
         </span>
       </div>
 
       <div className="mt-6 flex-1">
-        <h3 className="display text-2xl leading-tight text-ink transition-colors group-hover:text-brand-700">
+        <h3 className="display text-2xl leading-tight text-ink">
           {offer.title}
         </h3>
         <p className="mt-2 text-base font-medium text-ink-soft">{offer.company}</p>
 
         <div className="mt-6 flex flex-wrap gap-2">
-          {offer.skills.slice(0, 4).map((s) => (
-            <span
-              key={s}
-              className="rounded-lg bg-ink/5 px-2.5 py-1 text-[11px] font-semibold text-ink-soft"
-            >
-              {s}
+          {offer.filiere && offer.filiere !== '—' && (
+            <span className="rounded-lg bg-ink/5 px-2.5 py-1 text-[11px] font-semibold text-ink-soft">
+              {offer.filiere}
             </span>
-          ))}
+          )}
         </div>
       </div>
 
       <div className="mt-8 flex items-center justify-between border-t border-ink/5 pt-6 text-xs text-ink-soft font-medium">
         <span className="inline-flex items-center gap-1.5">
           <MapPin className="h-4 w-4 text-brand-600" />
-          {offer.city} {offer.remote && `· ${offer.remote}`}
+          {offer.city}
         </span>
-        <span className="inline-flex items-center gap-1.5 font-bold text-brand-700 transition-all group-hover:gap-2">
+        <span className="inline-flex items-center gap-1.5 font-bold text-brand-700">
           Découvrir
           <ArrowUpRight className="h-4 w-4" />
         </span>

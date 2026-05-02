@@ -17,7 +17,6 @@ class StagiaireController extends Controller
         $q = User::query()
             ->where('role', Role::Stagiaire)
             ->with('profile')
-            ->withCount('applications')
             ->latest();
 
         if ($search = $request->string('search')->toString()) {
@@ -41,8 +40,7 @@ class StagiaireController extends Controller
     public function show(User $stagiaire): JsonResponse
     {
         abort_unless($stagiaire->role === Role::Stagiaire, 404);
-        $stagiaire->load(['profile', 'cv'])
-            ->loadCount('applications');
+        $stagiaire->load(['profile', 'cv']);
 
         return response()->json([
             'data' => new StagiaireResource($stagiaire),

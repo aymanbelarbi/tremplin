@@ -16,8 +16,11 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Don't auto-logout — let ProtectedRoute handle redirect
-      // This prevents onboarding flow from being interrupted
+      const store = useAuthStore.getState()
+      if (store.token) {
+        store.logout()
+        window.location.href = '/connexion'
+      }
     }
     return Promise.reject(error)
   },

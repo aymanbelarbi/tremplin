@@ -14,6 +14,15 @@ use App\Http\Controllers\Api\Stagiaire\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
+    // Serve storage files (works without symlink on Windows/Linux)
+    Route::get('storage/{path}', function ($path) {
+        $fullPath = storage_path('app/public/' . $path);
+        if (!file_exists($fullPath)) {
+            abort(404);
+        }
+        return response()->file($fullPath);
+    })->where('path', '.*');
+
     // Public auth
     Route::post('auth/register', [AuthController::class, 'register'])->middleware('throttle:10,1');
     Route::post('auth/login', [AuthController::class, 'login'])->middleware('throttle:10,1');

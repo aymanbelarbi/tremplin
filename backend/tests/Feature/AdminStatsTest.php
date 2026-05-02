@@ -18,10 +18,9 @@ class AdminStatsTest extends TestCase
             ->getJson('/api/v1/admin/stats')
             ->assertOk()
             ->assertJsonStructure([
-                'kpis' => ['stagiaires', 'offers', 'applications', 'acceptance_rate'],
+                'kpis' => ['stagiaires', 'employed', 'looking', 'offers', 'applications'],
+                'employment_by_filiere',
                 'applications_30d',
-                'status_mix',
-                'offers_by_filiere',
                 'recent',
             ]);
     }

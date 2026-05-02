@@ -19,6 +19,19 @@ class ProfileController extends Controller
         $user = $request->user();
         $profile = Profile::firstOrCreate(['user_id' => $user->id]);
 
+        // Recalculate profile_completed on read (handles stale values)
+        $profile->profile_completed = (bool) (
+            $profile->filiere
+            && $user->first_name
+            && $user->last_name
+            && $user->email
+            && $user->phone
+            && $profile->promotion
+            && $profile->bio
+            && $profile->photo_path
+        );
+        $profile->saveQuietly();
+
         return response()->json([
             'user' => new UserResource($user),
             'profile' => new ProfileResource($profile),
@@ -37,7 +50,10 @@ class ProfileController extends Controller
             $user->last_name = $data['last_name'];
         }
         if (array_key_exists('phone', $data)) {
-            $user->phone = $data['phone'];
+            $user->phone = $data['phone'] ?: null;
+        }
+        if (isset($data['email'])) {
+            $user->email = $data['email'];
         }
         $user->save();
 
@@ -47,8 +63,17 @@ class ProfileController extends Controller
             'birth_date', 'city', 'filiere', 'promotion', 'bio',
             'loisirs',
         ])->toArray());
-        // Track progress marker
-        $profile->profile_completed = (bool) ($profile->filiere && $profile->city);
+        // Track progress marker — all required fields must be filled
+        $profile->profile_completed = (bool) (
+            $profile->filiere
+            && $user->first_name
+            && $user->last_name
+            && $user->email
+            && $user->phone
+            && $profile->promotion
+            && $profile->bio
+            && $profile->photo_path
+        );
         $profile->save();
 
         if (array_key_exists('bio', $data)) {

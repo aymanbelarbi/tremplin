@@ -52,6 +52,17 @@ class ApplicationController extends Controller
             ]);
         }
 
+        // Filiere matching: if offer has requirements, stagiaire's filiere must match
+        if ($offer->requirements && $profile->filiere) {
+            $offerFiliere = strtolower(trim($offer->requirements));
+            $profileFiliere = strtolower(trim($profile->filiere));
+            if ($offerFiliere !== $profileFiliere) {
+                throw ValidationException::withMessages([
+                    'filiere' => ['Cette offre ne correspond pas à votre filière.'],
+                ]);
+            }
+        }
+
         $app = Application::create([
             'user_id' => $user->id,
             'offer_id' => $offer->id,

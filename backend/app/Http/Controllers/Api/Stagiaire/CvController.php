@@ -27,7 +27,7 @@ class CvController extends Controller
 
         DB::transaction(function () use ($cv, $data, $user) {
             $cv->fill(collect($data)->only([
-                'summary', 'experiences', 'educations', 'skills',
+                'summary', 'headline', 'experiences', 'educations', 'skills',
                 'languages', 'certifications', 'loisirs', 'is_finalized',
             ])->toArray());
             $cv->save();
@@ -54,6 +54,12 @@ class CvController extends Controller
             if (isset($data['birth_date'])) {
                 $profile = \App\Models\Profile::firstOrCreate(['user_id' => $user->id]);
                 $profile->birth_date = $data['birth_date'];
+                $profile->save();
+            }
+
+            if (array_key_exists('address', $data)) {
+                $profile = \App\Models\Profile::firstOrCreate(['user_id' => $user->id]);
+                $profile->city = $data['address'] ?: null;
                 $profile->save();
             }
         });

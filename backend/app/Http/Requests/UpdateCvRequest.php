@@ -15,11 +15,13 @@ class UpdateCvRequest extends FormRequest
     {
         return [
             'summary' => ['nullable', 'string', 'max:2000'],
+            'headline' => ['nullable', 'string', 'max:255'],
             'is_finalized' => ['boolean'],
             'first_name' => ['nullable', 'string', 'max:100'],
             'last_name' => ['nullable', 'string', 'max:100'],
             'birth_date' => ['nullable', 'date'],
             'phone' => ['nullable', 'string', 'max:20'],
+            'address' => ['nullable', 'string', 'max:100'],
 
             'experiences' => ['nullable', 'array'],
             'educations' => ['nullable', 'array'],

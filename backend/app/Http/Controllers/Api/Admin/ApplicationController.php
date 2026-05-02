@@ -13,7 +13,7 @@ class ApplicationController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $q = Application::query()->with(['offer', 'user.profile'])->latest();
+        $q = Application::query()->with(['offer', 'user.profile', 'user.cv'])->latest();
 
         if ($offerId = $request->integer('offer_id')) {
             $q->where('offer_id', $offerId);

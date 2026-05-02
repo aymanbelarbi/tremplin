@@ -16,9 +16,6 @@ return new class extends Migration {
             $table->text('description');
             $table->text('requirements')->nullable();
             $table->string('location', 150)->nullable();
-            $table->string('contract_type', 80)->nullable();
-            $table->string('duration', 80)->nullable();
-            $table->string('salary_range', 80)->nullable();
             $table->boolean('is_published')->default(true);
             $table->timestamp('published_at')->nullable();
             $table->date('closes_at')->nullable();

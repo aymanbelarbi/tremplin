@@ -18,7 +18,6 @@ class StagiaireResource extends JsonResource
             'created_at' => $this->created_at,
             'profile' => $this->whenLoaded('profile', fn () => new ProfileResource($this->profile)),
             'cv' => $this->whenLoaded('cv', fn () => new CvResource($this->cv)),
-            'applications_count' => $this->whenCounted('applications'),
         ];
     }
 }

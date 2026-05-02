@@ -4,6 +4,7 @@ import { Save, Briefcase, Search, Loader2, Camera, X, Lock, Eye, EyeOff } from '
 import { useFilieres } from '@/hooks/useFilieres'
 import { toast } from 'sonner'
 import { getMyProfile, updateMyProfile, uploadPhoto, deletePhoto, changePassword } from '@/api/profile'
+import { useAuthStore } from '@/stores/authStore'
 import SectionHeader from '@/components/ui/SectionHeader'
 import Badge from '@/components/ui/Badge'
 import GroupedSelect from '@/components/ui/GroupedSelect'
@@ -33,6 +34,7 @@ const EMPLOYMENT_BADGE = {
 
 export default function ProfilPage() {
   const queryClient = useQueryClient()
+  const { setUser } = useAuthStore()
   const { data, isLoading } = useQuery({
     queryKey: ['me', 'profile'],
     queryFn: getMyProfile,
@@ -89,13 +91,17 @@ export default function ProfilPage() {
 
   const mutation = useMutation({
     mutationFn: updateMyProfile,
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast.success('Profil mis à jour.')
       setLastSavedForm(form)
       setPendingPhoto(null)
       setRemovePhoto(false)
       queryClient.invalidateQueries({ queryKey: ['me', 'profile'] })
       queryClient.invalidateQueries({ queryKey: ['me', 'cv'] })
+      // Sync auth store with updated user data (email, name, etc.)
+      if (data?.user) {
+        setUser(data.user)
+      }
     },
     onError: () => toast.error('Impossible d\'enregistrer.'),
   })
@@ -113,6 +119,7 @@ export default function ProfilPage() {
       await mutation.mutateAsync({
         first_name: form.first_name,
         last_name: form.last_name,
+        email: form.email,
         phone: form.phone,
         employment_status: form.employment_status,
         job_title: form.job_title || null,
@@ -166,9 +173,9 @@ export default function ProfilPage() {
             <div className="flex items-center gap-5">
               <div className="relative">
                 {pendingPreview ? (
-                  <img src={pendingPreview} alt="Aperçu" className="h-20 w-20 rounded-full object-cover" />
+                  <img src={pendingPreview} alt="Aperçu" className="h-20 w-20 rounded-full object-cover object-top" />
                 ) : photoUrl && !removePhoto ? (
-                  <img src={photoUrl} alt="Photo" className="h-20 w-20 rounded-full object-cover" />
+                  <img src={photoUrl} alt="Photo" className="h-20 w-20 rounded-full object-cover object-top" />
                 ) : (
                   <div className="flex h-20 w-20 items-center justify-center rounded-full bg-accent-400 text-2xl font-semibold text-ink">
                     {(form.first_name[0] || '') + (form.last_name[0] || '')}
@@ -282,8 +289,8 @@ export default function ProfilPage() {
                   {
                     parent: 'Situation',
                     options: [
-                      { label: "En recherche d'emploi", value: 'looking' },
-                      { label: "J'ai trouvé un emploi", value: 'employed' },
+                      { label: "En recherche d'emploi ou stage", value: 'looking' },
+                      { label: "J'ai trouvé un emploi ou stage", value: 'employed' },
                     ],
                   },
                 ]}

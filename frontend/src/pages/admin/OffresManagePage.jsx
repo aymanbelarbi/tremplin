@@ -1,10 +1,9 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   Plus,
   Search,
-  Filter,
   Pencil,
   Trash2,
   Briefcase,
@@ -19,12 +18,14 @@ import { useFilieres } from '@/hooks/useFilieres'
 import { normalizeOffer, denormalizeOffer } from '@/lib/normalizers'
 import SectionHeader from '@/components/ui/SectionHeader'
 import Badge from '@/components/ui/Badge'
+import IconBtn from '@/components/ui/IconBtn'
 import GroupedSelect from '@/components/ui/GroupedSelect'
 
 export default function OffresManagePage() {
   const queryClient = useQueryClient()
   const [query, setQuery] = useState('')
   const [type, setType] = useState('all')
+  const [filiereFilter, setFiliereFilter] = useState('')
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState(null)
 
@@ -33,6 +34,8 @@ export default function OffresManagePage() {
     queryFn: () => listAdminOffers(),
   })
   const offers = useMemo(() => raw.map(normalizeOffer), [raw])
+
+  const { filiereGroups, isLoading: loadingFilieres } = useFilieres()
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['admin', 'offers'] })
 
@@ -55,13 +58,14 @@ export default function OffresManagePage() {
   const filtered = useMemo(() => {
     return offers.filter((o) => {
       if (type !== 'all' && o.type !== type) return false
+      if (filiereFilter && o.filiere !== filiereFilter) return false
       if (query) {
         const q = query.toLowerCase()
         if (!o.title.toLowerCase().includes(q) && !(o.company || '').toLowerCase().includes(q)) return false
       }
       return true
     })
-  }, [offers, query, type])
+  }, [offers, query, type, filiereFilter])
 
   function handleSave(data) {
     const payload = denormalizeOffer(data)
@@ -93,53 +97,62 @@ export default function OffresManagePage() {
         }
       />
 
-      <div className="card-raised p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <label className="relative block sm:max-w-sm sm:flex-1">
+      <div className="card-raised p-4 space-y-3">
+        <div className="flex items-center gap-3">
+          <label className="relative block flex-1">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-subtle" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Rechercher une offre…"
+              placeholder="Rechercher par titre, entreprise…"
               className="input w-full pl-11"
             />
           </label>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center rounded-full bg-ink/5 p-1">
-              {[
-                { id: 'all', label: 'Tout' },
-                { id: 'stage', label: 'Stages' },
-                { id: 'emploi', label: 'Emplois' },
-              ].map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => setType(t.id)}
-                  className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
-                    type === t.id ? 'bg-ink text-paper' : 'text-ink-soft hover:text-ink'
-                  }`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-            <span className="inline-flex items-center gap-1 text-xs text-ink-muted">
-              <Filter className="h-3.5 w-3.5" />
-              {filtered.length}
-            </span>
+          <div className="w-64">
+            <GroupedSelect
+              id="filter-filiere"
+              placeholder={loadingFilieres ? 'Chargement...' : 'Toutes filières'}
+              groups={[
+                { parent: 'Toutes', options: [{ label: 'Toutes filières', value: '' }] },
+                ...filiereGroups.map((g) => ({
+                  parent: g.parent,
+                  options: g.options.map((o) => ({ label: o, value: o })),
+                })),
+              ]}
+              value={filiereFilter}
+              onChange={(v) => setFiliereFilter(v)}
+            />
+          </div>
+          <div className="flex items-center rounded-full bg-ink/5 p-1">
+            {[
+              { id: 'all', label: 'Tout' },
+              { id: 'stage', label: 'Stages' },
+              { id: 'emploi', label: 'Emplois' },
+            ].map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setType(t.id)}
+                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  type === t.id ? 'bg-ink text-paper' : 'text-ink-soft hover:text-ink'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
       <div className="card-raised overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[700px] text-sm">
             <thead>
               <tr className="border-b border-ink/5 bg-paper-tint text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-subtle">
-                <Th>Offre</Th>
+                <Th>Titre</Th>
+                <Th>Entreprise</Th>
                 <Th>Type</Th>
                 <Th>Filière</Th>
                 <Th>Ville</Th>
-                <Th className="text-center">Candidats</Th>
                 <Th>Clôture</Th>
                 <Th className="text-right">Actions</Th>
               </tr>
@@ -152,21 +165,20 @@ export default function OffresManagePage() {
                 <tr><td className="px-5 py-8 text-center text-ink-muted" colSpan={7}>Aucune offre.</td></tr>
               )}
               {filtered.map((o) => (
-                <tr key={o.id} className="border-b border-ink/5 last:border-0 hover:bg-paper-tint/50">
+                <tr key={o.id} className="border-b border-ink/5 last:border-0">
                   <Td>
                     <p className="font-semibold text-ink">{o.title}</p>
-                    <p className="text-xs text-ink-muted">{o.company}</p>
                   </Td>
+                  <Td className="text-ink-soft">{o.company}</Td>
                   <Td>
                     <Badge tone={o.type === 'stage' ? 'accent' : 'brand'} icon={o.type === 'stage' ? GraduationCap : Briefcase}>
                       {o.type === 'stage' ? 'Stage' : 'Emploi'}
                     </Badge>
                   </Td>
-                  <Td className="text-ink-soft">{o.filiere}</Td>
-                  <Td className="text-ink-soft">{o.city}</Td>
-                  <Td className="text-center font-semibold text-ink">{o.applicants}</Td>
+                  <Td className="text-ink-soft">{o.filiere === '—' ? '—' : o.filiere}</Td>
+                  <Td className="text-ink-soft">{o.city === '—' ? '—' : o.city}</Td>
                   <Td className="text-ink-soft">
-                    {o.deadline ? new Date(o.deadline).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) : '—'}
+                    {o.deadline ? new Date(o.deadline).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
                   </Td>
                   <Td className="text-right">
                     <div className="inline-flex items-center gap-1">
@@ -184,6 +196,7 @@ export default function OffresManagePage() {
       <AnimatePresence mode="wait">
         {open && (
           <OfferModal
+            key={editing?.id ?? 'new'}
             initial={editing}
             onClose={() => { setOpen(false); setEditing(null) }}
             onSave={handleSave}
@@ -201,44 +214,31 @@ function Td({ children, className = '' }) {
   return <td className={`px-5 py-4 align-middle ${className}`}>{children}</td>
 }
 
-function IconBtn({ children, label, onClick, danger }) {
-  return (
-    <button
-      onClick={onClick}
-      aria-label={label}
-      className={`flex h-8 w-8 items-center justify-center rounded-lg border border-ink/10 transition-colors ${
-        danger ? 'text-ink-muted hover:border-red-200 hover:bg-red-50 hover:text-red-700' : 'text-ink-soft hover:bg-ink/5 hover:text-ink'
-      }`}
-    >
-      {children}
-    </button>
-  )
-}
 
 function OfferModal({ initial, onClose, onSave }) {
   const { filieresList, filiereGroups, isLoading } = useFilieres()
   const defaultFiliere = filieresList.length > 0 ? filieresList[0] : 'Autres'
+  const DASH = '—'
+  const strip = (v) => (v == null || v === '' || v === DASH ? '' : v)
   const [form, setForm] = useState(
-    initial || {
-      title: '',
-      type: 'stage',
-      company: '',
-      filiere: defaultFiliere,
-      city: VILLES[0],
-      remote: 'Présentiel',
-      duration: '3 mois',
-      salary: '',
-      deadline: '2026-06-01',
-      description: '',
-    },
+    initial
+      ? {
+          ...initial,
+          city: strip(initial.city) || VILLES[0],
+          filiere: strip(initial.filiere) || defaultFiliere,
+          deadline: initial.deadline || '',
+        }
+      : {
+          title: '',
+          type: 'stage',
+          company: '',
+          filiere: defaultFiliere,
+          city: VILLES[0],
+          remote: 'Présentiel',
+          deadline: '',
+          description: '',
+        },
   )
-  
-  // Update filiere when list loads if no initial value
-  useEffect(() => {
-    if (!initial && form.filiere === 'Autres' && filieresList.length > 0) {
-      setForm((f) => ({ ...f, filiere: filieresList[0] }))
-    }
-  }, [filieresList, initial, form.filiere])
 
   return (
     <motion.div
@@ -278,8 +278,8 @@ function OfferModal({ initial, onClose, onSave }) {
         <form
           onSubmit={(e) => {
             e.preventDefault()
-            if (!form.title || !form.company) {
-              toast.error('Titre et entreprise sont obligatoires.')
+            if (!form.title || !form.company || !form.type || !form.filiere || !form.city || !form.description) {
+              toast.error('Tous les champs sont obligatoires.')
               return
             }
             onSave(form)
@@ -288,10 +288,10 @@ function OfferModal({ initial, onClose, onSave }) {
         >
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Titre">
-              <input className="input w-full" placeholder="Ex: Développeur React" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+              <input required className="input w-full" placeholder="Ex: Développeur React" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
             </Field>
             <Field label="Entreprise">
-              <input className="input w-full" placeholder="Ex: Tech Solutions" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} />
+              <input required className="input w-full" placeholder="Ex: Tech Solutions" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} />
             </Field>
             <Field label="Type">
               <GroupedSelect
@@ -336,13 +336,13 @@ function OfferModal({ initial, onClose, onSave }) {
                 onChange={(value) => setForm({ ...form, city: value })}
               />
             </Field>
-            <Field label="Dernière date">
-              <input type="date" className="input w-full" value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} />
+            <Field label="Clôture">
+              <input required type="date" className="input w-full" min={new Date().toISOString().slice(0, 10)} value={form.deadline || ''} onChange={(e) => setForm({ ...form, deadline: e.target.value || null })} />
             </Field>
           </div>
 
           <Field label="Description">
-            <textarea rows={4} className="input w-full resize-none" placeholder="Décrivez les responsabilités, compétences requises, avantages..." value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            <textarea required rows={4} className="input w-full resize-none" placeholder="Décrivez les responsabilités, compétences requises, avantages..." value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           </Field>
 
           <div className="flex items-center justify-end gap-2 border-t border-ink/5 pt-5">
