@@ -167,7 +167,7 @@ php artisan migrate:fresh --seed
 In a **new terminal** (keep the first one open):
 
 ```bash
-cd tremplin/frontend
+cd frontend
 npm install
 ```
 
