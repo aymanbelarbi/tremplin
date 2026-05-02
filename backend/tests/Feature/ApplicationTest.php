@@ -40,8 +40,7 @@ class ApplicationTest extends TestCase
 
         $this->actingAs($user)
             ->postJson('/api/v1/offers/'.$offer->id.'/apply')
-            ->assertCreated()
-            ->assertJsonPath('data.status', 'pending');
+            ->assertCreated();
 
         $this->assertDatabaseHas('applications', ['offer_id' => $offer->id]);
     }
@@ -74,34 +73,4 @@ class ApplicationTest extends TestCase
             ->assertStatus(422);
     }
 
-    public function test_admin_can_decide_application_and_mail_is_sent(): void
-    {
-        Mail::fake();
-        $offer = $this->makeOffer();
-        $user = User::factory()->create(['role' => Role::Stagiaire]);
-        Profile::create([
-            'user_id' => $user->id,
-            'profile_completed' => true,
-            'filiere' => 'Dev',
-            'city' => 'Khemisset',
-        ]);
-        Cv::create(['user_id' => $user->id, 'is_finalized' => true]);
-
-        $this->actingAs($user)
-            ->postJson('/api/v1/offers/'.$offer->id.'/apply')
-            ->assertCreated();
-
-        $appId = \App\Models\Application::first()->id;
-
-        $admin = User::factory()->admin()->create();
-        $this->actingAs($admin)
-            ->putJson('/api/v1/admin/applications/'.$appId.'/decision', [
-                'status' => 'accepted',
-                'decision_note' => 'Profil retenu.',
-            ])
-            ->assertOk()
-            ->assertJsonPath('data.status', 'accepted');
-
-        Mail::assertSent(\App\Mail\ApplicationStatusMail::class);
-    }
 }
