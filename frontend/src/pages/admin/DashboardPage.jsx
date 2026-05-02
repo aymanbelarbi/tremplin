@@ -6,9 +6,6 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
-  PieChart,
-  Pie,
-  Cell,
   BarChart,
   Bar,
 } from 'recharts'
@@ -16,9 +13,7 @@ import {
   Users,
   Briefcase,
   ClipboardList,
-  TrendingUp,
   ArrowUpRight,
-  Clock,
   CheckCircle2,
   XCircle,
   Circle,
@@ -27,12 +22,6 @@ import {
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getStats } from '@/api/admin'
-
-const STATUS_COLORS = {
-  accepted: '#0a7a3b',
-  pending: '#e2e8de',
-  refused: '#0f1411',
-}
 
 export default function DashboardPage() {
   const { data, isLoading } = useQuery({
@@ -72,7 +61,6 @@ export default function DashboardPage() {
   ]
 
   const applications30d = data?.applications_30d ?? []
-  const statusMix = [] // Removed status mix
   const employmentByFiliere = data?.employment_by_filiere ?? []
   const recent = data?.recent ?? []
   return (
@@ -295,7 +283,7 @@ export default function DashboardPage() {
               <li className="text-ink-muted">Aucun événement récent.</li>
             )}
             {recent.map((r, i) => (
-              <li key={i} className="flex items-start gap-3">
+              <li key={i} className={`flex items-start gap-3`}>
                 <StatusDot status={r.status} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium text-ink">{r.name}</p>

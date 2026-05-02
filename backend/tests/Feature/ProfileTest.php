@@ -30,8 +30,9 @@ class ProfileTest extends TestCase
 
         $this->actingAs($user)
             ->putJson('/api/v1/me/profile', [
-                'full_name' => 'Sara K.',
+                'first_name' => 'Sara', 'last_name' => 'K.',
                 'city' => 'Khemisset',
+                'promotion' => 2024, 'bio' => 'Test bio',
                 'filiere' => 'Développement informatique',
                 'niveau' => 'Technicien spécialisé',
                 'has_diploma' => true,
