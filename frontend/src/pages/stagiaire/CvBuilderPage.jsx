@@ -769,7 +769,7 @@ export default function CvBuilderPage() {
               </div>
               <div>
                 <p className="font-display text-lg font-medium text-ink">Photo requise</p>
-                <p className="mt-1 text-sm text-ink-muted">Ajoutez une photo de profil pour activer l'aperçu du CV.</p>
+                <p className="mt-1 text-sm text-ink-muted">Photo carrée (4x4) recommandé</p>
               </div>
               <Link to="/espace/profil" className="btn-primary mt-2 text-sm">Aller au profil</Link>
             </div>

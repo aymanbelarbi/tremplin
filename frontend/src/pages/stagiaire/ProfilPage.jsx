@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Save, Briefcase, Search, Loader2, Camera, X, Lock, Eye, EyeOff } from 'lucide-react'
+import { Save, Briefcase, Search, Loader2, Camera, X, Lock, Eye, EyeOff, Info } from 'lucide-react'
 import { useFilieres } from '@/hooks/useFilieres'
 import { toast } from 'sonner'
 import { getMyProfile, updateMyProfile, uploadPhoto, deletePhoto, changePassword } from '@/api/profile'
@@ -217,11 +217,19 @@ export default function ProfilPage() {
                   }}
                 />
               </div>
-              <div className="flex-1">
-                <p className="text-lg font-semibold text-ink">{form.first_name} {form.last_name}</p>
-                <p className="text-sm text-ink-muted">{form.email}</p>
+              <div className="flex-1 flex items-start justify-between">
+                <div>
+                  <p className="text-lg font-semibold text-ink">{form.first_name} {form.last_name}</p>
+                  <p className="text-sm text-ink-muted">{form.email}</p>
+                  <div className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-brand-600/90 whitespace-nowrap">
+                    <Info className="h-3.5 w-3.5" />
+                    <span>Photo carrée (4x4) recommandé</span>
+                  </div>
+                </div>
+                <div className="shrink-0">
+                  <Badge tone={empBadge.tone} icon={form.employment_status === 'employed' ? Briefcase : Search}>{empBadge.label}</Badge>
+                </div>
               </div>
-              <Badge tone={empBadge.tone} icon={form.employment_status === 'employed' ? Briefcase : Search}>{empBadge.label}</Badge>
             </div>
           </div>
 
@@ -421,7 +429,7 @@ export default function ProfilPage() {
               Un profil complet multiplie par 3 les réponses positives.
             </p>
             <p className="mt-2 text-sm text-paper/70">
-              Ajoutez une photo nette et personnalisez votre présentation.
+              Photo carrée (4x4) recommandé et présentation personnalisée.
             </p>
           </div>
         </aside>
