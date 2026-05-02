@@ -15,10 +15,10 @@ class AuthTest extends TestCase
     public function test_stagiaire_can_register(): void
     {
         $response = $this->postJson('/api/v1/auth/register', [
-            'full_name' => 'Ayman Belarbi',
+            'first_name' => 'Ayman',
+            'last_name' => 'Belarbi',
             'email' => 'ayman@example.com',
             'phone' => '0612345678',
-            'cin' => 'AB123456',
             'password' => 'secret1234',
             'password_confirmation' => 'secret1234',
         ]);
@@ -27,14 +27,14 @@ class AuthTest extends TestCase
             ->assertJsonStructure(['user' => ['id', 'full_name', 'email', 'role'], 'token']);
 
         $this->assertDatabaseHas('users', ['email' => 'ayman@example.com', 'role' => 'stagiaire']);
-        $this->assertDatabaseHas('profiles', []);
+        $this->assertDatabaseHas('profiles', ['user_id' => $response->json('user.id')]);
     }
 
     public function test_registration_validates_required_fields(): void
     {
         $response = $this->postJson('/api/v1/auth/register', []);
         $response->assertStatus(422)
-            ->assertJsonValidationErrors(['full_name', 'email', 'phone', 'cin', 'password']);
+            ->assertJsonValidationErrors(['first_name', 'last_name', 'email', 'phone', 'password']);
     }
 
     public function test_user_can_login_with_valid_credentials(): void

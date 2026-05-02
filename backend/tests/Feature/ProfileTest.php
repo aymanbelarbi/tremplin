@@ -25,16 +25,19 @@ class ProfileTest extends TestCase
 
     public function test_stagiaire_updates_profile(): void
     {
-        $user = User::factory()->create(['role' => Role::Stagiaire]);
+        $user = User::factory()->create([
+            'role' => Role::Stagiaire,
+            'first_name' => 'Sara',
+            'last_name' => 'K.',
+        ]);
         Profile::create(['user_id' => $user->id]);
 
         $this->actingAs($user)
             ->putJson('/api/v1/me/profile', [
-                'full_name' => 'Sara K.',
+                'first_name' => 'Sara',
+                'last_name' => 'K.',
                 'city' => 'Khemisset',
                 'filiere' => 'Développement informatique',
-                'niveau' => 'Technicien spécialisé',
-                'has_diploma' => true,
             ])
             ->assertOk()
             ->assertJsonPath('user.full_name', 'Sara K.')
